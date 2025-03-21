@@ -1,0 +1,64 @@
+Sistema para extrair dados de contracheques
+
+O sistema precisa extrair dados de contracheques
+
+precisa de um backend e frontend
+
+o frontend terá que ter um opção que irei digitar os códigos das verbas que irei querer como resultado na tabela de saída. abaixo disso, tera que ter duas áreas onde poderei escolher enviar o pdf pela área esquerda que terar o título ERP, um local para upload do pdf e um botão de enviar e processar. Do lado direito terá outra área chamada de RH Bahia, tera os mesmos itens da área esquerda (envio de pdf e botão), coloque cada um com cores diferentes, azul para um e vermelho para outro.
+e por fim embaixo terá a tabela de saida com a visualização dos dados e botões para exportar os dados em formatos compatível com o Excel ( ex: csv, js, etc)
+
+(personalize e deixe com uma boa estética e design)
+
+Para o backend 
+ele terar que ler e conseguir extrair os dados do pdf.
+
+A parte esquerda de envio, com o título ERP irá processa um tipo de pdf (Imagens: ERP 1, 2 e 3), este PDF possui dados de contracheque, preciso que pegue a data no formato: 11/2010 (restrinja a esse formato pois existe outras data no contracheque com o formato aa/mm/aaaa que quero que ignore)
+
+Assim, a tabela de saida tera um cabeçalho com os nomes, o primeiro se trata exatamente da "DATA" e título das colunas subsequentes tera o nome das verbas que seram pegas a partir do código que eu mandar, e a linha subsequente terá os valores, por exemplo:
+
+tem um contracheque com a data "11/2010" e nele existe as verbas:
+
+0160 GCG R$ 5.536,69
+0146 AD.T.SERV R$ 228,29
+0002 VENCIMENTO R$ 2.853,67
+
+Se na parte do código eu digitar 0160 uma das colunas terá o nome GCG e a linha de baixo o valor de 5.536,69, se eu colocar mais códigos irá pegar as que são correspondente, assim a tabela tera uma modelo do tipo (exemplo meramente ilustrativo):
+
+DATA, VERBA 1; VERBA 2; VERBA 3;...
+11/2010; R$ 500,00; R$ 4568,62; R$ 2143,32;...
+
+
+A parte direita ira extrair os dados de um outro modelo de pdf (imagem: RH) com a mesma lógica da de cima, extraindo assim as verbas a depender do código que coloco.
+
+Além disso, a data nesse documento tem o formato "Abril/2019", e as verbas tem o modelo: 
+
+Cód. Descrição Perct./Horas Período Valor(R$) Cód. Descrição Perc/Horas Valor(R$)
+/332 1ª parcela 13º salário 12.00 04.2019 8.493,62 /401 IRRF 27.50 2.991,71
+0002 Vencimento 30.00 04.2019 4.507,61 5005 Assistência Odontológica2 - ODONTO SYSTEM 054/999 23,38
+0008 Direção e Asses. Superior 30.00 04.2019 1.116,57 5022 Mensalidade Valor - AGGEB 049/999 45,07
+0037 Grat Exec Ativ Ciclo Gest 198.93 04.2019 8.966,99 5035 Prestação - CEF-MORADIA 001/001 1.043,19
+1116 CET Atr Hab Esp EPPGG 45.00 04.2019 1.674,86 7033 Assistência a Saúde 0.00 542,10
+2033 Adic Tempo de Serviço 16.00 04.2019 721,22 7034 Planserv / Dependente 0.00 119,26
+2044 Crédito Habitacional PAR 0.00 04.2019 781,09 7035 Planserv / Cônjuge 0.00 271,05
+7029 Auxilio Alimentação 0.00 04.2019 252,00 7038 Planserv Agregado Jovem 0.00 140,36
+7P40 Contribuição RPPS FUNPREV 14.00 2.378,22
+
+sendo que, por exemplo, eu digite o código 0002, a tabela tera a saida:
+
+DATA; Vencimento;
+Abril/2019; 4.507,61
+
+perceba que ele para após as duas casas depois a virgula, pois se continuar pegando na mesma linha vai acabar pegando a verba 5005 que não séria o objetivo (no caso só iria quer a 0002)
+
+COnsiderações finais:
+
+A área que irei digitar os códigos que quero tem que permitir colocar vários códigos e a tabela irá pegar todos o que digitei e colocar o nome (cabeçalho) e valores (linha) em cada coluna;
+
+Caso exista dois códigos na mesma data por exemplo o contracheque de Março/2015 possua duas verbas de Vencimento, quero que some elas; assim tbm vale para o modelo ERP, se uma data, por exemplo 02/2011 tem duas verbas com o mesmo código, some o seu valor e de o resultado do somatório.
+
+Reserve uma área do frontend para uma seção de login (parte de cima) com login de acesso padrão (dlinhares) e senha (123456), quando eu digitar isso, ira aparecer uma tela onde eu posso salvar códigos e deixar modelos prontos com listas de verbas cadastradas (botão de inserir novas verbas que ira pedi o código e o nome, e tbm uma área onde posso agrupar essas verbas cadastradas em um modelo por exemplo meramente ilustrativo, consigo fazer um modelo chamado "Contracheque de gestor" e dentro desse modelo consigo colocar as verbas "0002 Vencimento", "1116 CET Atr Hab Esp EPPGG" e ao selecionar o modelo, o sistema puxa todas as verbas que coloquei no modelo dentro do pdf que mando (se encontra-las), além disso, quero que eu seja livre tanto para adicionar e remover as verbas cadastradas, quando para editar o seu nome e código.
+
+Caso não exista a verba em determinada data, coloque o seu valor padrão igual a 0
+
+
+
