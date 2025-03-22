@@ -1,10 +1,16 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { rateLimiter, securityHeaders, csp, validatePDF, cleanupPDFData } from "./security";
+import { privacyHeaders, auditLog } from "./privacy-policy";
 //codígo antes da alteração
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+
+app.use(rateLimiter); // Add rate limiting middleware
+app.use(securityHeaders); // Add security headers middleware
+app.use(csp); // Add Content Security Policy middleware
+app.use(privacyHeaders); // Add privacy headers middleware
 
 app.use((req, res, next) => {
   const start = Date.now();
@@ -31,6 +37,7 @@ app.use((req, res, next) => {
 
       log(logLine);
     }
+    auditLog(req, res); // Add audit log entry after request completion.
   });
 
   next();
