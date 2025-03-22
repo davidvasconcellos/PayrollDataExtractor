@@ -18,7 +18,6 @@ import {
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
-import { apiRequest } from "../lib/queryClient";
 import { queryClient } from "../lib/queryClient";
 import { useToast } from "../hooks/use-toast";
 
@@ -49,9 +48,12 @@ export default function CodeGroupModal({
   const fetchCodeGroups = async () => {
     setLoading(true);
     try {
-      const data = await apiRequest("/api/code-groups", {
-        method: "GET",
-      });
+      // Usar fetch diretamente para evitar problemas de tipagem
+      const response = await fetch("/api/code-groups");
+      if (!response.ok) {
+        throw new Error("Falha ao buscar grupos de códigos");
+      }
+      const data = await response.json();
       setCodeGroups(data || []);
     } catch (error) {
       console.error("Failed to fetch code groups:", error);
@@ -94,29 +96,50 @@ export default function CodeGroupModal({
     
     setLoading(true);
     try {
+      const body = JSON.stringify({ displayName, codes });
+      
       if (editingId === null) {
         // Create new code group
-        await apiRequest("/api/code-groups", {
+        const response = await fetch("/api/code-groups", {
           method: "POST",
-          body: { displayName, codes },
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body
         });
+        
+        if (!response.ok) {
+          throw new Error("Falha ao criar grupo de códigos");
+        }
+        
         toast({
           title: "Sucesso",
           description: "Grupo de códigos criado com sucesso",
         });
       } else {
         // Update existing code group
-        await apiRequest(`/api/code-groups/${editingId}`, {
+        const response = await fetch(`/api/code-groups/${editingId}`, {
           method: "PUT",
-          body: { displayName, codes },
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body
         });
+        
+        if (!response.ok) {
+          throw new Error("Falha ao atualizar grupo de códigos");
+        }
+        
         toast({
           title: "Sucesso",
           description: "Grupo de códigos atualizado com sucesso",
         });
       }
+      
       resetForm();
       fetchCodeGroups();
+      // Força atualização dos dados na tabela
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll-data'] });
       onCodeGroupRefresh();
     } catch (error) {
       console.error("Failed to save code group:", error);
@@ -139,14 +162,22 @@ export default function CodeGroupModal({
   const handleDeleteCodeGroup = async (id: number) => {
     setLoading(true);
     try {
-      await apiRequest(`/api/code-groups/${id}`, {
-        method: "DELETE",
+      const response = await fetch(`/api/code-groups/${id}`, {
+        method: "DELETE"
       });
+      
+      if (!response.ok) {
+        throw new Error("Falha ao excluir grupo de códigos");
+      }
+      
       toast({
         title: "Sucesso",
         description: "Grupo de códigos excluído com sucesso",
       });
+      
       fetchCodeGroups();
+      // Força atualização dos dados na tabela
+      queryClient.invalidateQueries({ queryKey: ['/api/payroll-data'] });
       onCodeGroupRefresh();
     } catch (error) {
       console.error("Failed to delete code group:", error);
