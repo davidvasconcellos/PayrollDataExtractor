@@ -643,31 +643,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create JSON rows
       uniqueDates.forEach(date => {
         const row: any = { date };
-        const dateValues = consolidatedByDate.get(date)!;
 
-        // Mapa para controlar contadores de ocorrências por código
-        const codeOccurrences = new Map<string, number>();
+        // Pegar todos os items para esta data
+        const dateItems = payrollData
+          .filter(data => data.date === date)
+          .flatMap(data => JSON.parse(data.codeData as string) as ExtractedPayrollItem[]);
 
-        payrollData.forEach(data => {
-          if (data.date === date) {
-            const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
-            items.forEach(item => {
-              const displayCode = codeToDisplayMap.get(item.code) || item.code;
-              const baseDescription = codeDescriptions.get(displayCode) || displayCode;
+        // Processar cada item mantendo a ordem original
+        dateItems.forEach(item => {
+          const displayCode = codeToDisplayMap.get(item.code) || item.code;
 
-              // Incrementa contador para este código
-              const count = (codeOccurrences.get(displayCode) || 0) + 1;
-              codeOccurrences.set(displayCode, count);
-
-              // Cria descrição com contador
-              const description = count > 1 ? `${baseDescription}(${count})` : baseDescription;
-
-              // Format value as currency (R$ X.XXX,XX)
-              const formattedValue = `R$ ${item.value.toFixed(2).replace('.', ',')}`;
-              row[description] = formattedValue;
-            });
-          }
+          // Format value as currency (R$ X.XXX,XX)
+          const formattedValue = `R$ ${item.value.toFixed(2).replace('.', ',')}`;
+          row[item.description] = formattedValue;
         });
+
         consolidatedData.push(row);
       });
 
