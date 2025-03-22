@@ -70,27 +70,28 @@ export function extractPayrollItems(text: string, codes: string[]): ExtractedPay
   const lines = text.split(/[\n\r]+/);
 
   for (const code of codes) {
+    const matches = [];
+    let count = 0;
+    
     for (const line of lines) {
-      // Padrão ajustado para RH que pode ter descrições antes do código
-      const pattern = new RegExp(`(?:.*?\\s)?\\b${code}\\b[\\s.]*([^\\n\\r]+?)\\s+R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
+      const pattern = new RegExp(`(?:.*?\\s)?\\b${code}\\b[\\s.]*([^\\n\\r]+?)\\s+(?:\\d+(?:\\.\\d{2})?\\s+)?(\\d{2}\\.\\d{4})?\\s*R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
       const match = line.match(pattern);
 
       if (match) {
         const description = match[1].trim();
-        const valueStr = match[2].replace(/\./g, '').replace(',', '.');
+        const month = match[2] || '';
+        const valueStr = match[3].replace(/\./g, '').replace(',', '.');
         const value = parseFloat(valueStr);
 
-        console.log(`RH - Extraindo código ${code}: valor original="${match[2]}", convertido="${valueStr}", final=${value}`);
+        console.log(`RH - Extraindo código ${code}: valor original="${match[3]}", convertido="${valueStr}", final=${value}, mês=${month}`);
 
         if (!isNaN(value) && description) {
-          const existingItem = items.find(item => item.code === code);
-          if (existingItem) {
-            existingItem.value += value;
-          } else {
-            items.push({ code, description, value });
-          }
+          count++;
+          const descriptionWithCount = count > 1 ? `${description}(${count})` : description;
+          items.push({ code, description: descriptionWithCount, value });
         }
       }
+    }
     }
   }
 
