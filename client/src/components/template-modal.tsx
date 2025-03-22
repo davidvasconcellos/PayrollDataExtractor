@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Trash2, File, Plus } from "lucide-react";
+import { Pencil, Trash2, File, Plus, Check } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -37,6 +38,7 @@ export default function TemplateModal({
   const [templateCodes, setTemplateCodes] = useState("");
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
   const [selectedCodeGroup, setSelectedCodeGroup] = useState<string>("");
+  const [selectedGroups, setSelectedGroups] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   // Fetch templates
@@ -119,6 +121,45 @@ export default function TemplateModal({
     setTemplateCodes("");
     setEditingTemplate(null);
     setSelectedCodeGroup("");
+    setSelectedGroups({});
+  };
+  
+  // Atualizar códigos baseado nos grupos selecionados
+  const updateCodesFromSelectedGroups = () => {
+    if (!codeGroups) return;
+    
+    // Pegar os códigos atuais do template
+    const currentCodes = templateCodes.split(/[\s,]+/).filter(Boolean);
+    const uniqueCodes: Record<string, boolean> = {};
+    
+    // Adicionar os códigos atuais ao hash
+    currentCodes.forEach(code => {
+      uniqueCodes[code] = true;
+    });
+    
+    // Adicionar códigos dos grupos selecionados
+    Object.keys(selectedGroups).forEach(groupId => {
+      if (selectedGroups[groupId]) {
+        const group = codeGroups.find(g => g.id.toString() === groupId);
+        if (group) {
+          const groupCodes = group.codes.split(/[\s,]+/).filter(Boolean);
+          groupCodes.forEach(code => {
+            uniqueCodes[code] = true;
+          });
+        }
+      }
+    });
+    
+    // Atualizar o campo de códigos
+    setTemplateCodes(Object.keys(uniqueCodes).join(', '));
+  };
+  
+  // Alternar seleção de um grupo
+  const toggleGroup = (groupId: string, checked: boolean) => {
+    setSelectedGroups(prev => ({
+      ...prev,
+      [groupId]: checked
+    }));
   };
   
   // Handle code group selection
@@ -180,6 +221,34 @@ export default function TemplateModal({
     setEditingTemplate(template);
     setTemplateName(template.name);
     setTemplateCodes(template.codes);
+    
+    // Identificar e selecionar grupos que contêm os códigos do template
+    if (codeGroups) {
+      const templateCodeSet = new Set(template.codes.split(/[\s,]+/).filter(Boolean));
+      const newSelectedGroups: Record<string, boolean> = {};
+      
+      codeGroups.forEach(group => {
+        const groupCodes = group.codes.split(/[\s,]+/).filter(Boolean);
+        
+        // Verifica se pelo menos metade dos códigos do grupo estão no template
+        // Isso é uma heurística para sugerir grupos relacionados
+        let matchCount = 0;
+        for (const code of groupCodes) {
+          if (templateCodeSet.has(code)) {
+            matchCount++;
+          }
+        }
+        
+        // Se pelo menos 50% dos códigos do grupo estiverem no template ou se tiver mais de 3 matches,
+        // sugerimos que o grupo seja selecionado
+        const matchPercentage = matchCount / groupCodes.length;
+        if ((matchPercentage >= 0.5 && matchCount > 0) || matchCount >= 3) {
+          newSelectedGroups[group.id] = true;
+        }
+      });
+      
+      setSelectedGroups(newSelectedGroups);
+    }
   };
 
   // Handle delete template
@@ -195,6 +264,13 @@ export default function TemplateModal({
       resetForm();
     }
   }, [isOpen]);
+  
+  // Atualiza códigos quando os grupos selecionados mudarem
+  useEffect(() => {
+    if (Object.keys(selectedGroups).length > 0) {
+      updateCodesFromSelectedGroups();
+    }
+  }, [selectedGroups, codeGroups]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -285,6 +361,41 @@ export default function TemplateModal({
                   <Plus className="h-4 w-4 mr-1" />
                   Adicionar
                 </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Rubricas Integradas (Grupos de códigos salvos) */}
+          {codeGroups && codeGroups.length > 0 && (
+            <div>
+              <Label className="block mb-2">Rubricas Integradas</Label>
+              <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
+                {codeGroups.map((group) => (
+                  <div key={group.id} className="flex items-center space-x-2">
+                    <Checkbox 
+                      id={`group-${group.id}`} 
+                      checked={!!selectedGroups[group.id]}
+                      onCheckedChange={(checked) => toggleGroup(group.id.toString(), !!checked)}
+                    />
+                    <Label 
+                      htmlFor={`group-${group.id}`}
+                      className="text-sm cursor-pointer flex-1"
+                    >
+                      {group.displayName}
+                      <span className="text-xs text-gray-500 ml-2">
+                        ({group.codes.split(/[\s,]+/).filter(Boolean).length} códigos)
+                      </span>
+                    </Label>
+                  </div>
+                ))}
+                {codeGroups.length === 0 && (
+                  <div className="text-sm text-gray-500">
+                    Nenhum grupo de códigos disponível
+                  </div>
+                )}
+              </div>
+              <div className="mt-1 text-xs text-gray-500">
+                Os códigos dos grupos selecionados serão incluídos automaticamente no campo abaixo.
               </div>
             </div>
           )}
