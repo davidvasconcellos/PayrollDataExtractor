@@ -220,23 +220,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     // Parse codes
+    console.log('Códigos recebidos:', codes);
     const codesList = (codes as string).split(/[\s,]+/).filter(Boolean);
+    console.log('Códigos processados:', codesList);
     
     if (codesList.length === 0) {
       return res.status(400).json({ message: "No valid codes provided" });
     }
     
     try {
+      console.log('Processando PDF com códigos:', codesList);
       const result = await processPDF(req.file.buffer, codesList, source as PDFSource);
+      console.log('Resultado do processamento:', result);
       
       // Save the processed data
       if (result.date && result.items.length > 0) {
+        console.log('Salvando dados processados na base');
         await storage.createPayrollData({
           userId: req.user.id,
           date: result.date,
           source,
           codeData: JSON.stringify(result.items)
         });
+      } else {
+        console.log('Nenhum item encontrado ou data inválida');
       }
       
       res.status(200).json(result);
@@ -264,7 +271,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       payrollData.forEach(data => {
         uniqueDates.add(data.date);
         
-        const items = JSON.parse(data.codeData) as ExtractedPayrollItem[];
+        const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
         items.forEach(item => uniqueCodes.add(item.code));
       });
       
@@ -274,14 +281,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         // Initialize all codes with 0
         uniqueCodes.forEach(code => {
-          result[code] = 0;
+          result[code as string] = 0;
         });
         
         // Fill in actual values
         payrollData
           .filter(data => data.date === date)
           .forEach(data => {
-            const items = JSON.parse(data.codeData) as ExtractedPayrollItem[];
+            const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
             
             items.forEach(item => {
               result[item.code] = item.value;
