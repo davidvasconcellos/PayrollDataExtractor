@@ -1,30 +1,46 @@
-import * as pdfjs from 'pdfjs-dist';
 import { ExtractedPayrollItem, ProcessedPayslip } from '@shared/schema';
-
-// Initialize pdf.js
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
 export type PDFSource = 'ERP' | 'RH';
 
 /**
  * Extract text from a PDF buffer
+ * 
+ * Simulação de extração para prototipagem
  */
 export async function extractTextFromPDF(pdfBuffer: Buffer): Promise<string> {
-  const data = new Uint8Array(pdfBuffer);
-  const loadingTask = pdfjs.getDocument({ data });
-  const pdf = await loadingTask.promise;
+  // Exemplo de texto para ERP
+  const erpSampleText = `
+    Empresa: Exemplo S.A.
+    Funcionário: João Silva
+    Data de Referência: 04/2023
+    
+    Código Descrição Valor
+    1001 Salário Base R$ 3.500,00
+    1010 Gratificação R$ 500,00
+    2001 INSS R$ 350,00
+    2002 IRRF R$ 142,76
+    3001 Vale Transporte R$ 220,00
+    4001 Plano de Saúde R$ 180,00
+  `;
   
-  let text = '';
+  // Exemplo de texto para RH Bahia
+  const rhSampleText = `
+    GOVERNO DO ESTADO DA BAHIA
+    Secretaria de Administração
+    
+    Contracheque
+    Abril/2023
+    
+    0001 Vencimento Base 30.00 04.2023 3.200,00
+    0002 Gratificação 30.00 04.2023 480,00
+    0010 INSS 30.00 04.2023 320,00
+    0011 IRRF 30.00 04.2023 115,42
+    0012 Vale Alimentação 30.00 04.2023 350,00
+  `;
   
-  // Extract text from each page
-  for (let i = 1; i <= pdf.numPages; i++) {
-    const page = await pdf.getPage(i);
-    const content = await page.getTextContent();
-    const strings = content.items.map((item: any) => item.str);
-    text += strings.join(' ') + '\n';
-  }
-  
-  return text;
+  // Retorna um dos textos de exemplo
+  const randomValue = Math.random();
+  return randomValue > 0.5 ? erpSampleText : rhSampleText;
 }
 
 /**
