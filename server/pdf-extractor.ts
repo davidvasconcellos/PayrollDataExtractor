@@ -1,12 +1,18 @@
 
 import { ExtractedPayrollItem, ProcessedPayslip } from '@shared/schema';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
+import { NodeCanvasFactory } from 'pdfjs-dist/lib/test/utils/node_canvas';
 
 export type PDFSource = 'ERP' | 'RH';
+
+// Initialize worker
+const pdfjsWorker = require('pdfjs-dist/legacy/build/pdf.worker.js');
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 
 async function getDocument(pdfBuffer: Buffer) {
   return pdfjsLib.getDocument({
     data: pdfBuffer,
+    canvasFactory: new NodeCanvasFactory(),
     useWorkerFetch: false,
     isEvalSupported: false,
     useSystemFonts: true
