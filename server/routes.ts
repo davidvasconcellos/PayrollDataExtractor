@@ -645,13 +645,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const row: any = { date };
         const dateValues = consolidatedByDate.get(date)!;
         
-        uniqueDisplayCodes.forEach(displayCode => {
-          const description = codeDescriptions.get(displayCode) || displayCode;
-          const value = dateValues.get(displayCode) || 0;
-          
-          // Format value as currency (R$ X.XXX,XX)
-          const formattedValue = `R$ ${value.toFixed(2).replace('.', ',')}`;
-          row[description] = formattedValue;
+        // Mapa para controlar contadores de ocorrências por código
+        const codeOccurrences = new Map<string, number>();
+        
+        payrollData.forEach(data => {
+          if (data.date === date) {
+            const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
+            items.forEach(item => {
+              const displayCode = codeToDisplayMap.get(item.code) || item.code;
+              const baseDescription = codeDescriptions.get(displayCode) || displayCode;
+              
+              // Incrementa contador para este código
+              const count = (codeOccurrences.get(displayCode) || 0) + 1;
+              codeOccurrences.set(displayCode, count);
+              
+              // Cria descrição com contador
+              const description = count > 1 ? `${baseDescription}(${count})` : baseDescription;
+              
+              // Format value as currency (R$ X.XXX,XX)
+              const formattedValue = `R$ ${item.value.toFixed(2).replace('.', ',')}`;
+              row[description] = formattedValue;
+            });
+          }
+        });
         });
         
         consolidatedData.push(row);
