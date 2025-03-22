@@ -1,11 +1,14 @@
 import { 
   users, 
   templates, 
+  codeGroups,
   payrollData,
   type User, 
   type InsertUser, 
   type Template, 
   type InsertTemplate,
+  type CodeGroup,
+  type InsertCodeGroup,
   type PayrollData,
   type InsertPayrollData
 } from "@shared/schema";
@@ -23,6 +26,13 @@ export interface IStorage {
   updateTemplate(id: number, data: Partial<InsertTemplate>): Promise<Template | undefined>;
   deleteTemplate(id: number): Promise<boolean>;
   
+  // Code group operations
+  getCodeGroupsByUserId(userId: number): Promise<CodeGroup[]>;
+  getCodeGroupById(id: number): Promise<CodeGroup | undefined>;
+  createCodeGroup(codeGroup: InsertCodeGroup): Promise<CodeGroup>;
+  updateCodeGroup(id: number, data: Partial<InsertCodeGroup>): Promise<CodeGroup | undefined>;
+  deleteCodeGroup(id: number): Promise<boolean>;
+  
   // Payroll data operations
   getPayrollDataByUserId(userId: number): Promise<PayrollData[]>;
   createPayrollData(data: InsertPayrollData): Promise<PayrollData>;
@@ -32,17 +42,21 @@ export interface IStorage {
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private templates: Map<number, Template>;
+  private codeGroups: Map<number, CodeGroup>;
   private payrollData: Map<number, PayrollData>;
   private currentUserId: number;
   private currentTemplateId: number;
+  private currentCodeGroupId: number;
   private currentPayrollId: number;
 
   constructor() {
     this.users = new Map();
     this.templates = new Map();
+    this.codeGroups = new Map();
     this.payrollData = new Map();
     this.currentUserId = 1;
     this.currentTemplateId = 1;
+    this.currentCodeGroupId = 1;
     this.currentPayrollId = 1;
     
     // Add default user for the application
@@ -99,6 +113,37 @@ export class MemStorage implements IStorage {
 
   async deleteTemplate(id: number): Promise<boolean> {
     return this.templates.delete(id);
+  }
+
+  // Code group operations
+  async getCodeGroupsByUserId(userId: number): Promise<CodeGroup[]> {
+    return Array.from(this.codeGroups.values()).filter(
+      (group) => group.userId === userId
+    );
+  }
+
+  async getCodeGroupById(id: number): Promise<CodeGroup | undefined> {
+    return this.codeGroups.get(id);
+  }
+
+  async createCodeGroup(insertCodeGroup: InsertCodeGroup): Promise<CodeGroup> {
+    const id = this.currentCodeGroupId++;
+    const codeGroup: CodeGroup = { ...insertCodeGroup, id };
+    this.codeGroups.set(id, codeGroup);
+    return codeGroup;
+  }
+
+  async updateCodeGroup(id: number, data: Partial<InsertCodeGroup>): Promise<CodeGroup | undefined> {
+    const codeGroup = this.codeGroups.get(id);
+    if (!codeGroup) return undefined;
+    
+    const updatedCodeGroup: CodeGroup = { ...codeGroup, ...data };
+    this.codeGroups.set(id, updatedCodeGroup);
+    return updatedCodeGroup;
+  }
+
+  async deleteCodeGroup(id: number): Promise<boolean> {
+    return this.codeGroups.delete(id);
   }
 
   // Payroll data operations

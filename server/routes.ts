@@ -215,6 +215,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     await storage.deleteTemplate(id);
     res.status(200).json({ message: "Template deleted successfully" });
   });
+  
+  // Code Group routes
+  router.get("/code-groups", requireAuth, async (req: Request, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    const codeGroups = await storage.getCodeGroupsByUserId(req.user.id);
+    res.status(200).json(codeGroups);
+  });
+  
+  router.post("/code-groups", requireAuth, async (req: Request, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    const codeGroupSchema = z.object({
+      displayName: z.string().min(1),
+      codes: z.string().min(1)
+    });
+    
+    try {
+      const { displayName, codes } = codeGroupSchema.parse(req.body);
+      
+      const codeGroup = await storage.createCodeGroup({
+        userId: req.user.id,
+        displayName,
+        codes
+      });
+      
+      res.status(201).json(codeGroup);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid code group data" });
+    }
+  });
+  
+  router.put("/code-groups/:id", requireAuth, async (req: Request, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    const id = parseInt(req.params.id);
+    const codeGroupSchema = z.object({
+      displayName: z.string().min(1).optional(),
+      codes: z.string().min(1).optional()
+    });
+    
+    try {
+      const data = codeGroupSchema.parse(req.body);
+      
+      const codeGroup = await storage.getCodeGroupById(id);
+      
+      if (!codeGroup) {
+        return res.status(404).json({ message: "Code group not found" });
+      }
+      
+      if (codeGroup.userId !== req.user.id) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      
+      const updatedCodeGroup = await storage.updateCodeGroup(id, data);
+      res.status(200).json(updatedCodeGroup);
+    } catch (error) {
+      res.status(400).json({ message: "Invalid code group data" });
+    }
+  });
+  
+  router.delete("/code-groups/:id", requireAuth, async (req: Request, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    const id = parseInt(req.params.id);
+    const codeGroup = await storage.getCodeGroupById(id);
+    
+    if (!codeGroup) {
+      return res.status(404).json({ message: "Code group not found" });
+    }
+    
+    if (codeGroup.userId !== req.user.id) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+    
+    await storage.deleteCodeGroup(id);
+    res.status(200).json({ message: "Code group deleted successfully" });
+  });
 
   // PDF processing routes
   router.post("/process-pdf", requireAuth, upload.single("pdf"), async (req: Request, res: Response) => {
@@ -294,10 +380,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const payrollData = await storage.getPayrollDataByUserId(req.user.id);
       
+      // Buscar grupos de código do usuário
+      const codeGroups = await storage.getCodeGroupsByUserId(req.user.id);
+      
+      // Criar mapeamento de código para seu grupo exibido
+      const codeToDisplayMap = new Map<string, string>();
+      codeGroups.forEach(group => {
+        const codes = group.codes.split(/[\s,]+/).filter(Boolean);
+        codes.forEach(code => {
+          codeToDisplayMap.set(code, group.displayName);
+        });
+      });
+      
       // Transform into a consolidated format
       const consolidatedData: PayrollResult[] = [];
       const uniqueDates = new Set<string>();
-      const uniqueCodes = new Set<string>();
+      const uniqueDisplayCodes = new Set<string>();
       const codeDescriptions = new Map<string, string>();
       
       // Collect all unique dates and codes with their descriptions
@@ -306,10 +404,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
         items.forEach(item => {
-          uniqueCodes.add(item.code);
-          // Armazena descrição para cada código
+          // Verifica se o código tem um mapeamento de exibição
+          const displayCode = codeToDisplayMap.get(item.code) || item.code;
+          uniqueDisplayCodes.add(displayCode);
+          
+          // Armazena descrição para cada código de exibição
           if (item.description) {
-            codeDescriptions.set(item.code, item.description);
+            // Se o código for mapeado, usamos o nome do grupo como descrição
+            if (codeToDisplayMap.has(item.code)) {
+              codeDescriptions.set(displayCode, displayCode);
+            } else {
+              codeDescriptions.set(displayCode, item.description);
+            }
           }
         });
       });
@@ -318,19 +424,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       uniqueDates.forEach(date => {
         const result: PayrollResult = { date };
         
-        // Initialize all codes with 0
-        uniqueCodes.forEach(code => {
-          result[code as string] = 0;
+        // Initialize all display codes with 0
+        uniqueDisplayCodes.forEach(displayCode => {
+          result[displayCode] = 0;
         });
         
-        // Fill in actual values
+        // Fill in actual values, agrupando por código de exibição
         payrollData
           .filter(data => data.date === date)
           .forEach(data => {
             const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
             
             items.forEach(item => {
-              result[item.code] = item.value;
+              const displayCode = codeToDisplayMap.get(item.code) || item.code;
+              // Soma valores para códigos agrupados
+              result[displayCode] = (result[displayCode] as number) + item.value;
             });
           });
         
@@ -338,14 +446,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Converte o Map de descrições para um objeto para enviar no JSON
-      const codeInfo = Array.from(uniqueCodes).map(code => ({
-        code,
-        description: codeDescriptions.get(code as string) || code
+      const codeInfo = Array.from(uniqueDisplayCodes).map(displayCode => ({
+        code: displayCode,
+        description: codeDescriptions.get(displayCode) || displayCode
       }));
       
       res.status(200).json({
         data: consolidatedData,
-        codes: Array.from(uniqueCodes),
+        codes: Array.from(uniqueDisplayCodes),
         codeInfo: codeInfo
       });
     } catch (error) {
@@ -383,27 +491,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const payrollData = await storage.getPayrollDataByUserId(req.user.id);
       
-      // Same consolidation logic as in the /payroll-data endpoint
-      const uniqueDates = new Set<string>();
-      const uniqueCodes = new Set<string>();
-      const codeDescriptions = new Map<string, string>();
+      // Buscar grupos de código do usuário
+      const codeGroups = await storage.getCodeGroupsByUserId(req.user.id);
       
+      // Criar mapeamento de código para seu grupo exibido
+      const codeToDisplayMap = new Map<string, string>();
+      codeGroups.forEach(group => {
+        const codes = group.codes.split(/[\s,]+/).filter(Boolean);
+        codes.forEach(code => {
+          codeToDisplayMap.set(code, group.displayName);
+        });
+      });
+      
+      // Transform into a consolidated format
+      const uniqueDates = new Set<string>();
+      const uniqueDisplayCodes = new Set<string>();
+      const codeDescriptions = new Map<string, string>();
+      const consolidatedByDate = new Map<string, Map<string, number>>();
+      
+      // Collect all unique dates and codes with their descriptions
       payrollData.forEach(data => {
         uniqueDates.add(data.date);
         
+        // Inicializar mapa para esta data se não existir
+        if (!consolidatedByDate.has(data.date)) {
+          consolidatedByDate.set(data.date, new Map<string, number>());
+        }
+        
         const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
         items.forEach(item => {
-          uniqueCodes.add(item.code);
-          codeDescriptions.set(item.code, item.description);
+          // Verifica se o código tem um mapeamento de exibição
+          const displayCode = codeToDisplayMap.get(item.code) || item.code;
+          uniqueDisplayCodes.add(displayCode);
+          
+          // Armazena descrição para cada código de exibição
+          if (item.description) {
+            // Se o código for mapeado, usamos o nome do grupo como descrição
+            if (codeToDisplayMap.has(item.code)) {
+              codeDescriptions.set(displayCode, displayCode);
+            } else {
+              codeDescriptions.set(displayCode, item.description);
+            }
+          }
+          
+          // Soma valores agrupados para cada data
+          const dateValues = consolidatedByDate.get(data.date)!;
+          const currentValue = dateValues.get(displayCode) || 0;
+          dateValues.set(displayCode, currentValue + item.value);
         });
       });
       
       // Create CSV header
       let csv = "DATA";
-      const codesArray = Array.from(uniqueCodes);
+      const displayCodesArray = Array.from(uniqueDisplayCodes);
       
-      codesArray.forEach(code => {
-        const description = codeDescriptions.get(code) || code;
+      displayCodesArray.forEach(displayCode => {
+        const description = codeDescriptions.get(displayCode) || displayCode;
         csv += `;${description}`;
       });
       
@@ -412,21 +555,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create CSV rows
       uniqueDates.forEach(date => {
         let row = date;
+        const dateValues = consolidatedByDate.get(date)!;
         
-        codesArray.forEach(code => {
-          let value = 0;
-          
-          // Find data for this date and code
-          payrollData
-            .filter(data => data.date === date)
-            .forEach(data => {
-              const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
-              const item = items.find(i => i.code === code);
-              
-              if (item) {
-                value = item.value;
-              }
-            });
+        displayCodesArray.forEach(displayCode => {
+          const value = dateValues.get(displayCode) || 0;
           
           // Format value as currency (R$ X.XXX,XX)
           const formattedValue = `R$ ${value.toFixed(2).replace('.', ',')}`;
