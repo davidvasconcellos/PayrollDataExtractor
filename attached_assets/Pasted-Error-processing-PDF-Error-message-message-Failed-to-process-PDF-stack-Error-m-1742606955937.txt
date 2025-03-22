@@ -1,0 +1,81 @@
+Error processing PDF: 
+Error {}
+message: "{"message":"Failed to process PDF"}"
+stack: "Error: {"message":"Failed to process PDF"}↵ at handleProcessFile (https://a2516065-f1cc-4c19-9431-b4989816af51-00-9ej86eovrnyf.janeway.replit.dev/src/components/pdf-upload-section.tsx:97:15)"
+get stack: ƒ ()
+length: 0
+name: ""
+[[Prototype]]: ƒ ()
+apply: ƒ apply()
+length: 2
+name: "apply"
+[[Prototype]]: ƒ ()
+apply: ƒ apply()
+arguments: "'caller', 'callee', and 'arguments' properties may not be accessed on strict mode functions or the arguments objects for calls to them"
+get arguments: ƒ ()
+set arguments: ƒ ()
+bind: ƒ bind()
+call: ƒ call()
+caller: "'caller', 'callee', and 'arguments' properties may not be accessed on strict mode functions or the arguments objects for calls to them"
+get caller: ƒ ()
+set caller: ƒ ()
+constructor: ƒ Function()
+length: 1
+name: ""
+toString: ƒ toString()
+Symbol(Symbol.hasInstance): undefined
+[[Prototype]]: Object
+arguments: "'caller', 'callee', and 'arguments' properties may not be accessed on strict mode functions or the arguments objects for calls to them"
+get arguments: ƒ ()
+set arguments: ƒ ()
+bind: ƒ bind()
+call: ƒ call()
+caller: "'caller', 'callee', and 'arguments' properties may not be accessed on strict mode functions or the arguments objects for calls to them"
+get caller: ƒ ()
+set caller: ƒ ()
+constructor: ƒ Function()
+length: 1
+name: ""
+toString: ƒ toString()
+Symbol(Symbol.hasInstance): undefined
+[[Prototype]]: Object
+set stack: ƒ ()
+length: 1
+name: ""
+[[Prototype]]: ƒ ()
+apply: ƒ apply()
+length: 2
+name: "apply"
+[[Prototype]]: ƒ ()
+arguments: "'caller', 'callee', and 'arguments' properties may not be accessed on strict mode functions or the arguments objects for calls to them"
+get arguments: ƒ ()
+set arguments: ƒ ()
+bind: ƒ bind()
+call: ƒ call()
+caller: "'caller', 'callee', and 'arguments' properties may not be accessed on strict mode functions or the arguments objects for calls to them"
+get caller: ƒ ()
+set caller: ƒ ()
+constructor: ƒ Function()
+length: 1
+name: ""
+toString: ƒ toString()
+Symbol(Symbol.hasInstance): undefined
+[[Prototype]]: Object
+[[Prototype]]: Object
+constructor: ƒ Error()
+stackTraceLimit: 10
+captureStackTrace: ƒ captureStackTrace()
+isError: ƒ isError()
+length: 1
+name: "Error"
+prototype: Object
+[[Prototype]]: ƒ ()
+message: "{"message":"Failed to process PDF"}"
+name: "Error"
+toString: ƒ toString()
+[[Prototype]]: Object
+
+at t.value (https://a2516065-f1cc-4c19-9431-b4989816af51-00-9ej86eovrnyf.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:17465)
+at new t (https://a2516065-f1cc-4c19-9431-b4989816af51-00-9ej86eovrnyf.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:12630)
+at t.value (https://a2516065-f1cc-4c19-9431-b4989816af51-00-9ej86eovrnyf.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:32766)
+at https://a2516065-f1cc-4c19-9431-b4989816af51-00-9ej86eovrnyf.janeway.replit.dev/__replco/static/devtools/eruda/3.2.3/eruda.js:2:34400
