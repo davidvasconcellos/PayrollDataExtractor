@@ -274,12 +274,15 @@ export default function TemplateModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center">
             <File className="mr-2 h-5 w-5" />
             Gerenciar Modelos
           </DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            Crie e edite modelos para extrair dados específicos dos contracheques
+          </DialogDescription>
         </DialogHeader>
         
         {/* Template List */}
@@ -328,88 +331,59 @@ export default function TemplateModal({
             />
           </div>
 
-          {/* Seleção de grupo de códigos */}
-          {codeGroups && codeGroups.length > 0 && (
+          {/* Layout dividido em duas colunas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Coluna da esquerda: entrada manual de códigos */}
             <div>
-              <Label htmlFor="codeGroup">Adicionar grupo de códigos</Label>
-              <div className="flex items-center gap-2 mt-1">
-                <Select
-                  value={selectedCodeGroup}
-                  onValueChange={setSelectedCodeGroup}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Selecione um grupo de códigos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectLabel>Grupos de códigos</SelectLabel>
-                      {codeGroups.map((group) => (
-                        <SelectItem key={group.id} value={group.id.toString()}>
-                          {group.displayName}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  onClick={() => handleCodeGroupSelect(selectedCodeGroup)}
-                  disabled={!selectedCodeGroup}
-                  className="shrink-0"
-                >
-                  <Plus className="h-4 w-4 mr-1" />
-                  Adicionar
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* Rubricas Integradas (Grupos de códigos salvos) */}
-          {codeGroups && codeGroups.length > 0 && (
-            <div>
-              <Label className="block mb-2">Rubricas Integradas</Label>
-              <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
-                {codeGroups.map((group) => (
-                  <div key={group.id} className="flex items-center space-x-2">
-                    <Checkbox 
-                      id={`group-${group.id}`} 
-                      checked={!!selectedGroups[group.id]}
-                      onCheckedChange={(checked) => toggleGroup(group.id.toString(), !!checked)}
-                    />
-                    <Label 
-                      htmlFor={`group-${group.id}`}
-                      className="text-sm cursor-pointer flex-1"
-                    >
-                      {group.displayName}
-                      <span className="text-xs text-gray-500 ml-2">
-                        ({group.codes.split(/[\s,]+/).filter(Boolean).length} códigos)
-                      </span>
-                    </Label>
-                  </div>
-                ))}
-                {codeGroups.length === 0 && (
-                  <div className="text-sm text-gray-500">
-                    Nenhum grupo de códigos disponível
-                  </div>
-                )}
-              </div>
+              <Label htmlFor="templateCodes">Códigos</Label>
+              <Textarea
+                id="templateCodes"
+                rows={8}
+                value={templateCodes}
+                onChange={(e) => setTemplateCodes(e.target.value)}
+                placeholder="0002, 0160, 0146"
+                className="mt-1 font-mono"
+              />
               <div className="mt-1 text-xs text-gray-500">
-                Os códigos dos grupos selecionados serão incluídos automaticamente no campo abaixo.
+                Digite manualmente os códigos das verbas, separados por vírgulas ou espaços.
               </div>
             </div>
-          )}
 
-          <div>
-            <Label htmlFor="templateCodes">Códigos</Label>
-            <Textarea
-              id="templateCodes"
-              rows={3}
-              value={templateCodes}
-              onChange={(e) => setTemplateCodes(e.target.value)}
-              placeholder="0002, 0160, 0146"
-              className="mt-1 font-mono"
-            />
+            {/* Coluna da direita: seleção de grupos de códigos */}
+            <div>
+              <Label className="block mb-2">Grupos de Códigos</Label>
+              {codeGroups && codeGroups.length > 0 ? (
+                <div className="border rounded-md p-3 space-y-2 max-h-[220px] overflow-y-auto">
+                  {codeGroups.map((group) => (
+                    <div key={group.id} className="flex items-center space-x-2">
+                      <Checkbox 
+                        id={`group-${group.id}`} 
+                        checked={!!selectedGroups[group.id]}
+                        onCheckedChange={(checked) => toggleGroup(group.id.toString(), !!checked)}
+                      />
+                      <Label 
+                        htmlFor={`group-${group.id}`}
+                        className={`text-sm cursor-pointer flex-1 ${selectedGroups[group.id] ? 'font-semibold text-primary' : ''}`}
+                      >
+                        {group.displayName}
+                        <span className={`text-xs ml-2 ${selectedGroups[group.id] ? 'text-primary-foreground/70' : 'text-gray-500'}`}>
+                          ({group.codes.split(/[\s,]+/).filter(Boolean).length} códigos)
+                        </span>
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="border rounded-md p-3 text-sm text-center text-gray-500">
+                  Nenhum grupo de código disponível.
+                  <br />
+                  Crie grupos na opção "Gerenciar Grupos".
+                </div>
+              )}
+              <div className="mt-1 text-xs text-gray-500">
+                Selecione um ou mais grupos para incluir os códigos automaticamente no modelo.
+              </div>
+            </div>
           </div>
         </div>
 
