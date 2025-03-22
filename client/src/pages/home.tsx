@@ -2,13 +2,14 @@ import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { FileText, LogOut, Sliders } from "lucide-react";
+import { FileText, LogOut, Sliders, Link } from "lucide-react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import CodeInputSection from "@/components/code-input-section";
 import PDFUploadSection from "@/components/pdf-upload-section";
 import ResultsTable from "@/components/results-table";
 import TemplateModal from "@/components/template-modal";
+import CodeGroupModal from "@/components/code-group-modal";
 
 interface TemplateType {
   id: number;
@@ -20,6 +21,7 @@ export default function Home() {
   const { user, logout } = useAuth();
   const { toast } = useToast();
   const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [codeGroupModalOpen, setCodeGroupModalOpen] = useState(false);
   const [codes, setCodes] = useState("");
   const [processedData, setProcessedData] = useState<any[]>([]);
   const [codeHeaders, setCodeHeaders] = useState<string[]>([]);
@@ -164,6 +166,15 @@ export default function Home() {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => setCodeGroupModalOpen(true)}
+                className="mr-2"
+              >
+                <Link className="mr-2 h-4 w-4" />
+                Gerenciar Grupos
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => setTemplateModalOpen(true)}
               >
                 <Sliders className="mr-2 h-4 w-4" />
@@ -247,6 +258,15 @@ export default function Home() {
         onClose={() => setTemplateModalOpen(false)}
         onTemplateRefresh={() => {
           queryClient.invalidateQueries({ queryKey: ['/api/templates'] });
+        }}
+      />
+      
+      {/* Code Group Modal */}
+      <CodeGroupModal
+        isOpen={codeGroupModalOpen}
+        onClose={() => setCodeGroupModalOpen(false)}
+        onCodeGroupRefresh={() => {
+          queryClient.invalidateQueries({ queryKey: ['/api/payroll-data'] });
         }}
       />
     </div>

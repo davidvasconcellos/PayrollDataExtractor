@@ -586,41 +586,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const payrollData = await storage.getPayrollDataByUserId(req.user.id);
       
-      // Same consolidation logic as in the /payroll-data endpoint
+      // Buscar grupos de código do usuário
+      const codeGroups = await storage.getCodeGroupsByUserId(req.user.id);
+      
+      // Criar mapeamento de código para seu grupo exibido
+      const codeToDisplayMap = new Map<string, string>();
+      codeGroups.forEach(group => {
+        const codes = group.codes.split(/[\s,]+/).filter(Boolean);
+        codes.forEach(code => {
+          codeToDisplayMap.set(code, group.displayName);
+        });
+      });
+      
+      // Transform into a consolidated format
       const uniqueDates = new Set<string>();
-      const uniqueCodes = new Set<string>();
+      const uniqueDisplayCodes = new Set<string>();
       const codeDescriptions = new Map<string, string>();
+      const consolidatedByDate = new Map<string, Map<string, number>>();
       const consolidatedData: any[] = [];
       
+      // Collect all unique dates and codes with their descriptions
       payrollData.forEach(data => {
         uniqueDates.add(data.date);
         
+        // Inicializar mapa para esta data se não existir
+        if (!consolidatedByDate.has(data.date)) {
+          consolidatedByDate.set(data.date, new Map<string, number>());
+        }
+        
         const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
         items.forEach(item => {
-          uniqueCodes.add(item.code);
-          codeDescriptions.set(item.code, item.description);
+          // Verifica se o código tem um mapeamento de exibição
+          const displayCode = codeToDisplayMap.get(item.code) || item.code;
+          uniqueDisplayCodes.add(displayCode);
+          
+          // Armazena descrição para cada código de exibição
+          if (item.description) {
+            // Se o código for mapeado, usamos o nome do grupo como descrição
+            if (codeToDisplayMap.has(item.code)) {
+              codeDescriptions.set(displayCode, displayCode);
+            } else {
+              codeDescriptions.set(displayCode, item.description);
+            }
+          }
+          
+          // Soma valores agrupados para cada data
+          const dateValues = consolidatedByDate.get(data.date)!;
+          const currentValue = dateValues.get(displayCode) || 0;
+          dateValues.set(displayCode, currentValue + item.value);
         });
       });
       
       // Create JSON rows
       uniqueDates.forEach(date => {
         const row: any = { date };
+        const dateValues = consolidatedByDate.get(date)!;
         
-        uniqueCodes.forEach(code => {
-          const description = codeDescriptions.get(code) || code;
-          let value = 0;
-          
-          // Find data for this date and code
-          payrollData
-            .filter(data => data.date === date)
-            .forEach(data => {
-              const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
-              const item = items.find(i => i.code === code);
-              
-              if (item) {
-                value = item.value;
-              }
-            });
+        uniqueDisplayCodes.forEach(displayCode => {
+          const description = codeDescriptions.get(displayCode) || displayCode;
+          const value = dateValues.get(displayCode) || 0;
           
           // Format value as currency (R$ X.XXX,XX)
           const formattedValue = `R$ ${value.toFixed(2).replace('.', ',')}`;
