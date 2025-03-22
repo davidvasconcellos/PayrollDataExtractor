@@ -1,13 +1,10 @@
 
 import { ExtractedPayrollItem, ProcessedPayslip } from '@shared/schema';
 import * as pdfjsLib from 'pdfjs-dist';
-import { fileURLToPath } from 'url';
-import path from 'path';
+import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs';
 
 // Initialize worker for Node environment
-const pdfjsWorker = require('pdfjs-dist/build/pdf.worker.js');
 if (typeof window === 'undefined') {
-  const pdfjsVersion = require('pdfjs-dist/package.json').version;
   pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
 }
 
