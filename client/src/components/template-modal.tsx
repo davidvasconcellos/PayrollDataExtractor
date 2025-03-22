@@ -22,6 +22,12 @@ interface Template {
   codes: string;
 }
 
+interface CodeGroup {
+  id: number;
+  displayName: string;
+  codes: string;
+}
+
 export default function TemplateModal({ 
   isOpen, 
   onClose, 
@@ -30,11 +36,18 @@ export default function TemplateModal({
   const [templateName, setTemplateName] = useState("");
   const [templateCodes, setTemplateCodes] = useState("");
   const [editingTemplate, setEditingTemplate] = useState<Template | null>(null);
+  const [selectedCodeGroup, setSelectedCodeGroup] = useState<string>("");
   const { toast } = useToast();
 
   // Fetch templates
-  const { data: templates, isLoading } = useQuery({
+  const { data: templates, isLoading } = useQuery<Template[]>({
     queryKey: ['/api/templates'],
+    enabled: isOpen, // Only fetch when modal is open
+  });
+  
+  // Fetch code groups
+  const { data: codeGroups } = useQuery<CodeGroup[]>({
+    queryKey: ['/api/code-groups'],
     enabled: isOpen, // Only fetch when modal is open
   });
 
@@ -105,6 +118,34 @@ export default function TemplateModal({
     setTemplateName("");
     setTemplateCodes("");
     setEditingTemplate(null);
+    setSelectedCodeGroup("");
+  };
+  
+  // Handle code group selection
+  const handleCodeGroupSelect = (groupId: string) => {
+    if (!groupId) return;
+    
+    const selectedGroup = codeGroups?.find(group => group.id.toString() === groupId);
+    if (selectedGroup) {
+      // Adicionar os códigos do grupo ao textarea, preservando os códigos existentes
+      const currentCodes = templateCodes.split(/[\s,]+/).filter(Boolean);
+      const newCodes = selectedGroup.codes.split(/[\s,]+/).filter(Boolean);
+      
+      // Combinar os códigos e remover duplicatas usando um objeto como hash
+      const uniqueCodes: Record<string, boolean> = {};
+      
+      // Adicionar códigos atuais e novos ao hash
+      [...currentCodes, ...newCodes].forEach(code => {
+        uniqueCodes[code] = true;
+      });
+      
+      // Obter as chaves do objeto como array
+      const combinedCodes = Object.keys(uniqueCodes);
+      setTemplateCodes(combinedCodes.join(', '));
+      
+      // Resetar seleção
+      setSelectedCodeGroup("");
+    }
   };
 
   // Handle form submission
@@ -210,6 +251,43 @@ export default function TemplateModal({
               className="mt-1"
             />
           </div>
+
+          {/* Seleção de grupo de códigos */}
+          {codeGroups && codeGroups.length > 0 && (
+            <div>
+              <Label htmlFor="codeGroup">Adicionar grupo de códigos</Label>
+              <div className="flex items-center gap-2 mt-1">
+                <Select
+                  value={selectedCodeGroup}
+                  onValueChange={setSelectedCodeGroup}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Selecione um grupo de códigos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectLabel>Grupos de códigos</SelectLabel>
+                      {codeGroups.map((group) => (
+                        <SelectItem key={group.id} value={group.id.toString()}>
+                          {group.displayName}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => handleCodeGroupSelect(selectedCodeGroup)}
+                  disabled={!selectedCodeGroup}
+                  className="shrink-0"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Adicionar
+                </Button>
+              </div>
+            </div>
+          )}
 
           <div>
             <Label htmlFor="templateCodes">Códigos</Label>
