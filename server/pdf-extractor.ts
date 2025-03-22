@@ -1,5 +1,10 @@
 import { ExtractedPayrollItem, ProcessedPayslip } from '@shared/schema';
 import * as pdfjsLib from 'pdfjs-dist';
+import { PDFDocumentProxy } from 'pdfjs-dist';
+
+// Initialize PDF.js worker
+import { GlobalWorkerOptions } from 'pdfjs-dist/build/pdf';
+GlobalWorkerOptions.workerSrc = require('pdfjs-dist/build/pdf.worker.entry');
 
 export type PDFSource = 'ERP' | 'RH';
 
