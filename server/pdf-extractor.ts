@@ -92,22 +92,24 @@ export function extractDate(text: string, source: PDFSource): string {
       /Data\s*de\s*Refer[êe]ncia:?\s*(\d{2}\/\d{4})/i,
       /Compet[êe]ncia:?\s*(\d{2}\/\d{4})/i,
       /Per[íi]odo:?\s*(\d{2}\/\d{4})/i,
-      /(\d{2})\/(\d{4})/
+      /(\d{2})\/(\d{4})/,
+      /\b(\d{2}\/\d{4})\b/
     ];
 
     for (const pattern of patterns) {
       const match = cleanText.match(pattern);
       if (match) {
-        console.log("Data encontrada (ERP):", match[1]);
-        return match[1];
+        const date = match[1].includes('/') ? match[1] : `${match[1]}/${match[2]}`;
+        console.log("Data encontrada (ERP):", date);
+        return date;
       }
     }
   } else {
-    const monthNames = '(Janeiro|Fevereiro|Mar[çc]o|Abril|Maio|Junho|Julho|Agosto|Setembro|Outubro|Novembro|Dezembro)';
+    const monthNames = '(Janeiro|Fevereiro|Março|Marco|Abril|Maio|Junho|Julho|Agosto|Setembro|Outubro|Novembro|Dezembro)';
     const patterns = [
       new RegExp(`${monthNames}\\s*/?\\s*(20\\d{2})`, 'i'),
-      new RegExp(`Data\\s*de\\s*Refer[êe]ncia:?\\s*${monthNames}\\s*/?\\s*(20\\d{2})`, 'i'),
-      /(\d{2})\/(\d{4})/
+      new RegExp(`${monthNames}\\s*/?\\s*(\\d{4})`, 'i'),
+      new RegExp(`Data\\s*de\\s*Refer[êe]ncia:?\\s*${monthNames}\\s*/?\\s*(\\d{4})`, 'i')
     ];
 
     for (const pattern of patterns) {
