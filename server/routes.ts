@@ -230,23 +230,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       console.log('Processando PDF com códigos:', codesList);
-      const result = await processPDF(req.file.buffer, codesList, source as PDFSource);
-      console.log('Resultado do processamento:', result);
+      const results = await processPDF(req.file.buffer, codesList, source as PDFSource);
+      console.log('Resultado do processamento (múltiplas páginas):', results);
       
-      // Save the processed data
-      if (result.date && result.items.length > 0) {
-        console.log('Salvando dados processados na base');
-        await storage.createPayrollData({
-          userId: req.user.id,
-          date: result.date,
-          source,
-          codeData: JSON.stringify(result.items)
-        });
-      } else {
-        console.log('Nenhum item encontrado ou data inválida');
+      // Processar e salvar cada resultado (uma página do PDF)
+      let successCount = 0;
+      
+      // Salvar cada resultado separadamente
+      for (const result of results) {
+        if (result.date && result.items.length > 0) {
+          console.log(`Salvando dados processados da data ${result.date} na base`);
+          await storage.createPayrollData({
+            userId: req.user.id,
+            date: result.date,
+            source,
+            codeData: JSON.stringify(result.items)
+          });
+          successCount++;
+        } else {
+          console.log(`Nenhum item encontrado ou data inválida para um dos resultados`);
+        }
       }
       
-      res.status(200).json(result);
+      if (successCount === 0) {
+        console.log('Não foi possível extrair nenhum dado válido do PDF');
+      } else {
+        console.log(`${successCount} páginas do PDF foram processadas com sucesso`);
+      }
+      
+      // Retorna todos os resultados processados
+      res.status(200).json(results[0] || { date: '', items: [], source });
     } catch (error) {
       console.error("PDF processing error:", error);
       res.status(500).json({ message: "Failed to process PDF" });
