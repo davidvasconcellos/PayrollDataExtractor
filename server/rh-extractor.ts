@@ -70,9 +70,11 @@ export function extractPayrollItems(text: string, codes: string[]): ExtractedPay
   const lines = text.split(/[\n\r]+/);
 
   for (const code of codes) {
+    let maxValue = 0;
+    let maxDescription = '';
+    
     for (const line of lines) {
-      // Padrão ajustado para RH que pode ter descrições antes do código
-      const pattern = new RegExp(`(?:.*?\\s)?\\b${code}\\b[\\s.]*([^\\n\\r]+?)\\s+R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
+      const pattern = new RegExp(`(?:.*?\\s)?\\b${code}\\b[\\s.]*([^\\n\\r]+?)\\s+(?:\\d+(?:\\.\\d{2})?\\s+)?(?:\\d{2}\\.\\d{4}\\s+)?R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
       const match = line.match(pattern);
 
       if (match) {
@@ -83,14 +85,16 @@ export function extractPayrollItems(text: string, codes: string[]): ExtractedPay
         console.log(`RH - Extraindo código ${code}: valor original="${match[2]}", convertido="${valueStr}", final=${value}`);
 
         if (!isNaN(value) && description) {
-          const existingItem = items.find(item => item.code === code);
-          if (existingItem) {
-            existingItem.value += value;
-          } else {
-            items.push({ code, description, value });
+          if (value > maxValue) {
+            maxValue = value;
+            maxDescription = description;
           }
         }
       }
+    }
+
+    if (maxValue > 0) {
+      items.push({ code, description: maxDescription, value: maxValue });
     }
   }
 
