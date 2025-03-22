@@ -353,6 +353,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch payroll data" });
     }
   });
+  
+  // Clear all payroll data for current user
+  router.post("/payroll-data/clear", requireAuth, async (req: Request, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    
+    try {
+      const deleted = await storage.clearPayrollDataByUserId(req.user.id);
+      
+      if (deleted) {
+        res.status(200).json({ message: "All payroll data cleared successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to clear some payroll data" });
+      }
+    } catch (error) {
+      console.error("Error clearing payroll data:", error);
+      res.status(500).json({ message: "Failed to clear payroll data" });
+    }
+  });
 
   // Generate CSV export
   router.get("/export/csv", requireAuth, async (req: Request, res: Response) => {

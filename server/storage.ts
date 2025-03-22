@@ -26,6 +26,7 @@ export interface IStorage {
   // Payroll data operations
   getPayrollDataByUserId(userId: number): Promise<PayrollData[]>;
   createPayrollData(data: InsertPayrollData): Promise<PayrollData>;
+  clearPayrollDataByUserId(userId: number): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -112,6 +113,22 @@ export class MemStorage implements IStorage {
     const data: PayrollData = { ...insertData, id };
     this.payrollData.set(id, data);
     return data;
+  }
+
+  async clearPayrollDataByUserId(userId: number): Promise<boolean> {
+    // Encontrar todos os IDs de registros desse usuário
+    const userPayrollIds = Array.from(this.payrollData.entries())
+      .filter(([_, data]) => data.userId === userId)
+      .map(([id, _]) => id);
+    
+    // Excluir cada registro
+    let allDeleted = true;
+    for (const id of userPayrollIds) {
+      const deleted = this.payrollData.delete(id);
+      allDeleted = allDeleted && deleted;
+    }
+    
+    return allDeleted;
   }
 }
 
