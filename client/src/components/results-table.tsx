@@ -3,18 +3,27 @@ import { Button } from "@/components/ui/button";
 import { Download, FileJson } from "lucide-react";
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from "@/components/ui/table";
 
+interface CodeInfo {
+  code: string;
+  description: string;
+}
+
 interface ResultsTableProps {
   data: any[];
   codeHeaders: string[];
+  codeInfo?: CodeInfo[]; // Nova propriedade para informações de código
   onExportCSV: () => void;
   onExportJSON: () => void;
+  onReset?: () => void; // Nova propriedade para função de reset
 }
 
 export default function ResultsTable({ 
   data, 
   codeHeaders,
+  codeInfo = [], // Default para array vazio
   onExportCSV, 
-  onExportJSON 
+  onExportJSON,
+  onReset
 }: ResultsTableProps) {
   const formatCurrencyValue = (value: any) => {
     if (typeof value === 'number') {
@@ -31,6 +40,11 @@ export default function ResultsTable({
           <CardDescription>Dados extraídos dos contracheques.</CardDescription>
         </div>
         <div className="flex space-x-2">
+          {onReset && (
+            <Button variant="destructive" size="sm" onClick={onReset}>
+              Limpar Dados
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={onExportCSV}>
             <Download className="mr-2 h-4 w-4" />
             Exportar CSV

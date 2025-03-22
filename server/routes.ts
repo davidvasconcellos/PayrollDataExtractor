@@ -266,13 +266,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const consolidatedData: PayrollResult[] = [];
       const uniqueDates = new Set<string>();
       const uniqueCodes = new Set<string>();
+      const codeDescriptions = new Map<string, string>();
       
-      // Collect all unique dates and codes
+      // Collect all unique dates and codes with their descriptions
       payrollData.forEach(data => {
         uniqueDates.add(data.date);
         
         const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
-        items.forEach(item => uniqueCodes.add(item.code));
+        items.forEach(item => {
+          uniqueCodes.add(item.code);
+          // Armazena descrição para cada código
+          if (item.description) {
+            codeDescriptions.set(item.code, item.description);
+          }
+        });
       });
       
       // Create consolidated results
@@ -298,9 +305,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         consolidatedData.push(result);
       });
       
+      // Converte o Map de descrições para um objeto para enviar no JSON
+      const codeInfo = Array.from(uniqueCodes).map(code => ({
+        code,
+        description: codeDescriptions.get(code as string) || code
+      }));
+      
       res.status(200).json({
         data: consolidatedData,
-        codes: Array.from(uniqueCodes)
+        codes: Array.from(uniqueCodes),
+        codeInfo: codeInfo
       });
     } catch (error) {
       console.error("Error fetching payroll data:", error);

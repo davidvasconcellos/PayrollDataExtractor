@@ -51,27 +51,56 @@ Total Geral:                                   R$ 4.793,44
  * Extract date from the PDF text based on source type
  */
 export function extractDate(text: string, source: PDFSource): string {
-  console.log('Extraindo data do texto do PDF');
+  console.log('Extraindo data do texto do PDF, fonte:', source);
   
-  // Extrai data no formato MM/YYYY para qualquer fonte
-  const dateMatch = text.match(/Data de Referência:[\s\n]*(\d{2}\/\d{4})/);
-  
-  if (dateMatch) {
-    console.log('Data encontrada:', dateMatch[1]);
-    return dateMatch[1];
+  if (source === 'ERP') {
+    // Tenta encontrar formato MM/YYYY para ERP após "Data de Referência:"
+    const dateMatchERP = text.match(/Data de Referência:[\s\n]*(\d{2}\/\d{4})/i);
+    
+    if (dateMatchERP) {
+      console.log('Data ERP encontrada:', dateMatchERP[1]);
+      return dateMatchERP[1];
+    }
+    
+    // Alternativa para quando a data está na linha seguinte
+    const altDateMatchERP = text.match(/Data de Referência:\s*\n(\d{2}\/\d{4})/i);
+    if (altDateMatchERP) {
+      console.log('Data ERP alternativa encontrada:', altDateMatchERP[1]);
+      return altDateMatchERP[1];
+    }
+  } 
+  else if (source === 'RH') {
+    // Para RH Bahia - procura por padrão Mês/Ano (ex: Abril/2022)
+    const monthNames = '(Janeiro|Fevereiro|Março|Abril|Maio|Junho|Julho|Agosto|Setembro|Outubro|Novembro|Dezembro)';
+    const dateMatchRH = text.match(new RegExp(monthNames + '\\/\\d{4}', 'i'));
+    
+    if (dateMatchRH) {
+      console.log('Data RH encontrada (mês):', dateMatchRH[0]);
+      return dateMatchRH[0];
+    }
+    
+    // Alternativa - verificar também formato numérico em RH
+    const altDateMatchRH = text.match(/(\d{2})\/(\d{4})/);
+    if (altDateMatchRH) {
+      console.log('Data RH alternativa encontrada (numérica):', altDateMatchRH[0]);
+      return altDateMatchRH[0];
+    }
   }
   
-  // Teste alternativo para o formato do PDF de exemplo
-  const altDateMatch = text.match(/Data de Referência:\s*\n(\d{2}\/\d{4})/);
-  
-  if (altDateMatch) {
-    console.log('Data alternativa encontrada:', altDateMatch[1]);
-    return altDateMatch[1];
+  // Busca genérica para qualquer formato de data quando nenhum dos padrões anteriores funcionou
+  const genericDateMatch = text.match(/(\d{2})\/(\d{4})/);
+  if (genericDateMatch) {
+    console.log('Data genérica encontrada:', genericDateMatch[0]);
+    return genericDateMatch[0];
   }
   
-  // Se não encontrar nenhum formato, retorna uma data padrão para testes
-  console.log('Nenhuma data encontrada, usando padrão');
-  return '05/2023';
+  console.log('Nenhuma data encontrada, usando data atual');
+  
+  // Se nenhum formato for encontrado, usa a data atual
+  const today = new Date();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const year = today.getFullYear();
+  return `${month}/${year}`;
 }
 
 /**
