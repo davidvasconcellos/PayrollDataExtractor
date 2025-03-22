@@ -1,7 +1,6 @@
-
 import { ExtractedPayrollItem, ProcessedPayslip } from '@shared/schema';
-import * as pdfjsLib from 'pdfjs-dist';
-import pdfjsWorker from 'pdfjs-dist/build/pdf.worker.mjs';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
+import pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.js';
 
 // Initialize worker for Node environment
 if (typeof window === 'undefined') {
@@ -50,7 +49,7 @@ function extractRHDate(text: string): string | null {
 
   const monthPattern = Object.keys(monthMap).join('|');
   const pattern = new RegExp(`(${monthPattern})[\/\\s]*de[\\s]*?(\\d{4})`, 'i');
-  
+
   const match = text.match(pattern);
   if (match) {
     const month = monthMap[match[1].toLowerCase()];
@@ -68,7 +67,7 @@ function extractERPItems(text: string, codes: string[]): ExtractedPayrollItem[] 
       new RegExp(`${code}[\\s.]+([^\\n\\r]+?)\\s+R\\$\\s*(\\d+[.,]\\d{2})`, 'i'),
       new RegExp(`${code}[\\s.]+([^\\n\\r]+?)\\s+(\\d+[.,]\\d{2})`, 'i')
     ];
-    
+
     for (const line of lines) {
       for (const pattern of patterns) {
         const match = line.match(pattern);
@@ -77,7 +76,7 @@ function extractERPItems(text: string, codes: string[]): ExtractedPayrollItem[] 
           const value = parseFloat(
             match[2].replace(/\./g, '').replace(',', '.')
           );
-          
+
           const existingItem = items.find(item => item.code === code);
           if (existingItem) {
             existingItem.value += value;
@@ -102,7 +101,7 @@ function extractRHItems(text: string, codes: string[]): ExtractedPayrollItem[] {
       new RegExp(`${code}[\\s.]+([^\\n\\r]+?)\\s+(\\d+[.,]\\d{2})`, 'i'),
       new RegExp(`${code}[\\s.]+([^\\n\\r]+?)\\s+R\\$\\s*(\\d+[.,]\\d{2})`, 'i')
     ];
-    
+
     for (const line of lines) {
       for (const pattern of patterns) {
         const match = line.match(pattern);
@@ -112,7 +111,7 @@ function extractRHItems(text: string, codes: string[]): ExtractedPayrollItem[] {
           const value = parseFloat(
             match[valueIndex].replace(/\./g, '').replace(',', '.')
           );
-          
+
           const existingItem = items.find(item => item.code === code);
           if (existingItem) {
             existingItem.value += value;
