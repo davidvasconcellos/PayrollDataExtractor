@@ -73,8 +73,8 @@ export function extractPayrollItems(text: string, codes: string[]): ExtractedPay
     const codeMatches: { description: string; value: number }[] = [];
     
     for (const line of lines) {
-      // Padrão ajustado para RH que pode ter descrições antes do código
-      const pattern = new RegExp(`(?:.*?\\s)?\\b${code}\\b[\\s.]*([^\\n\\r]+?)\\s+(?:\\d+(?:[.,]\\d{2}))?\\.?\\d{2}\\s+(?:\\d{2}\\.\\d{4}\\s+)?R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
+      // Padrão ajustado para formato específico do RH
+      const pattern = new RegExp(`\\b${code}\\s+([^\\n\\r]+?)\\s+\\d+\\.\\d{2}\\s+\\d{2}\\.\\d{4}\\s+([\\d.,]+)`, 'i');
       const match = line.match(pattern);
 
       if (match) {
