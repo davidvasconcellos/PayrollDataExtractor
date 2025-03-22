@@ -1,17 +1,16 @@
 
 import { ExtractedPayrollItem, ProcessedPayslip } from '@shared/schema';
-import * as pdfjsLib from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.js';
 
 export type PDFSource = 'ERP' | 'RH';
 
 async function getDocument(pdfBuffer: Buffer) {
-  const loadingTask = pdfjsLib.getDocument({
-    data: new Uint8Array(pdfBuffer),
+  return pdfjsLib.getDocument({
+    data: pdfBuffer,
     useWorkerFetch: false,
     isEvalSupported: false,
     useSystemFonts: true
-  });
-  return loadingTask.promise;
+  }).promise;
 }
 
 async function extractPageText(page: any): Promise<string> {
@@ -45,7 +44,7 @@ function extractRHDate(text: string): string | null {
   };
 
   const monthPattern = Object.keys(monthMap).join('|');
-  const pattern = new RegExp(`(${monthPattern})[\/\\s-](\\d{4})`, 'i');
+  const pattern = new RegExp(`(${monthPattern})[\/\\s]*de[\\s]*?(\\d{4})`, 'i');
   
   const match = text.match(pattern);
   if (match) {
@@ -57,27 +56,30 @@ function extractRHDate(text: string): string | null {
 
 function extractERPItems(text: string, codes: string[]): ExtractedPayrollItem[] {
   const items: ExtractedPayrollItem[] = [];
-  const lines = text.split(/[\n\r\s]{2,}/);
+  const lines = text.split(/[\n\r]+/);
 
   for (const code of codes) {
-    const codePattern = new RegExp(
-      `${code}\\s+([^\\n\\r]+?)\\s+R\\$\\s*(\\d+[.,]\\d{2})`,
-      'i'
-    );
+    const patterns = [
+      new RegExp(`${code}[\\s.]+([^\\n\\r]+?)\\s+R\\$\\s*(\\d+[.,]\\d{2})`, 'i'),
+      new RegExp(`${code}[\\s.]+([^\\n\\r]+?)\\s+(\\d+[.,]\\d{2})`, 'i')
+    ];
     
     for (const line of lines) {
-      const match = line.match(codePattern);
-      if (match) {
-        const description = match[1].trim();
-        const value = parseFloat(
-          match[2].replace(/\./g, '').replace(',', '.')
-        );
-        
-        const existingItem = items.find(item => item.code === code);
-        if (existingItem) {
-          existingItem.value += value;
-        } else {
-          items.push({ code, description, value });
+      for (const pattern of patterns) {
+        const match = line.match(pattern);
+        if (match) {
+          const description = match[1].trim();
+          const value = parseFloat(
+            match[2].replace(/\./g, '').replace(',', '.')
+          );
+          
+          const existingItem = items.find(item => item.code === code);
+          if (existingItem) {
+            existingItem.value += value;
+          } else {
+            items.push({ code, description, value });
+          }
+          break;
         }
       }
     }
@@ -88,27 +90,31 @@ function extractERPItems(text: string, codes: string[]): ExtractedPayrollItem[] 
 
 function extractRHItems(text: string, codes: string[]): ExtractedPayrollItem[] {
   const items: ExtractedPayrollItem[] = [];
-  const lines = text.split(/[\n\r\s]{2,}/);
+  const lines = text.split(/[\n\r]+/);
 
   for (const code of codes) {
-    const codePattern = new RegExp(
-      `${code}\\s+([^\\n\\r]+?)\\s+(\\d+[.,]\\d{2})`,
-      'i'
-    );
+    const patterns = [
+      new RegExp(`${code}[\\s.]+([^\\n\\r]+?)\\s+(\\d+[.,]\\d{2})`, 'i'),
+      new RegExp(`${code}[\\s.]+([^\\n\\r]+?)\\s+R\\$\\s*(\\d+[.,]\\d{2})`, 'i')
+    ];
     
     for (const line of lines) {
-      const match = line.match(codePattern);
-      if (match) {
-        const description = match[1].trim();
-        const value = parseFloat(
-          match[2].replace(/\./g, '').replace(',', '.')
-        );
-        
-        const existingItem = items.find(item => item.code === code);
-        if (existingItem) {
-          existingItem.value += value;
-        } else {
-          items.push({ code, description, value });
+      for (const pattern of patterns) {
+        const match = line.match(pattern);
+        if (match) {
+          const description = match[1].trim();
+          const valueIndex = pattern.toString().includes('R\\$') ? 2 : 1;
+          const value = parseFloat(
+            match[valueIndex].replace(/\./g, '').replace(',', '.')
+          );
+          
+          const existingItem = items.find(item => item.code === code);
+          if (existingItem) {
+            existingItem.value += value;
+          } else {
+            items.push({ code, description, value });
+          }
+          break;
         }
       }
     }
