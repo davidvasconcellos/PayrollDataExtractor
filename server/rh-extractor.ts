@@ -65,57 +65,32 @@ export function extractDate(text: string): string | null {
   return null;
 }
 
-interface PayrollMatch {
-  code: string;
-  description: string;
-  value: number;
-  month: string;
-}
-
 export function extractPayrollItems(text: string, codes: string[]): ExtractedPayrollItem[] {
   const items: ExtractedPayrollItem[] = [];
   const lines = text.split(/[\n\r]+/);
-  const monthPattern = /\d{2}\.\d{4}/;
 
   for (const code of codes) {
-    const codeMatches: PayrollMatch[] = [];
-    
     for (const line of lines) {
-      const pattern = new RegExp(`\\b${code}\\s+([^\\n\\r]+?)\\s+\\d+\\.\\d{2}\\s+(\\d{2}\\.\\d{4})\\s+([\\d.,]+)`, 'i');
+      // Padrão ajustado para RH que pode ter descrições antes do código
+      const pattern = new RegExp(`(?:.*?\\s)?\\b${code}\\b[\\s.]*([^\\n\\r]+?)\\s+R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
       const match = line.match(pattern);
 
       if (match) {
         const description = match[1].trim();
-        const month = match[2];
-        const valueStr = match[3].replace(/\./g, '').replace(',', '.');
+        const valueStr = match[2].replace(/\./g, '').replace(',', '.');
         const value = parseFloat(valueStr);
 
+        console.log(`RH - Extraindo código ${code}: valor original="${match[2]}", convertido="${valueStr}", final=${value}`);
+
         if (!isNaN(value) && description) {
-          codeMatches.push({ code, description, value, month });
+          const existingItem = items.find(item => item.code === code);
+          if (existingItem) {
+            existingItem.value += value;
+          } else {
+            items.push({ code, description, value });
+          }
         }
       }
-    }
-
-    // Encontrar o maior valor por mês
-    const monthlyMaxValues = new Map<string, number>();
-    const descriptionByMonth = new Map<string, string>();
-
-    codeMatches.forEach(match => {
-      const currentMax = monthlyMaxValues.get(match.month) || 0;
-      if (match.value > currentMax) {
-        monthlyMaxValues.set(match.month, match.value);
-        descriptionByMonth.set(match.month, match.description);
-      }
-    });
-
-    // Adicionar item somado
-    if (codeMatches.length > 0) {
-      const month = codeMatches[0].month;
-      items.push({
-        code,
-        description: descriptionByMonth.get(month) || '',
-        value: monthlyMaxValues.get(month) || 0
-      });
     }
   }
 
