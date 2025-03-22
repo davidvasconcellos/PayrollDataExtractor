@@ -61,11 +61,17 @@ export default function ResultsTable({
             <TableHeader>
               <TableRow>
                 <TableHead className="font-medium">DATA</TableHead>
-                {codeHeaders.map((code) => (
-                  <TableHead key={code} className="font-medium">
-                    {code}
-                  </TableHead>
-                ))}
+                {codeHeaders.map((code) => {
+                  // Buscar descrição do código, se disponível
+                  const codeData = codeInfo.find(item => item.code === code);
+                  const displayText = codeData ? codeData.description : code;
+                  
+                  return (
+                    <TableHead key={code} className="font-medium">
+                      {displayText}
+                    </TableHead>
+                  );
+                })}
               </TableRow>
             </TableHeader>
             <TableBody>

@@ -23,6 +23,7 @@ export default function Home() {
   const [codes, setCodes] = useState("");
   const [processedData, setProcessedData] = useState<any[]>([]);
   const [codeHeaders, setCodeHeaders] = useState<string[]>([]);
+  const [codeInfo, setCodeInfo] = useState<{code: string, description: string}[]>([]);
 
   // Fetch templates
   const { data: templatesData } = useQuery({
@@ -44,10 +45,15 @@ export default function Home() {
     if (payrollData && typeof payrollData === 'object') {
       const data = (payrollData as any)?.data || [];
       const codes = (payrollData as any)?.codes || [];
+      const codeInfoData = (payrollData as any)?.codeInfo || [];
       
       if (Array.isArray(data) && Array.isArray(codes)) {
         setProcessedData(data);
         setCodeHeaders(codes);
+        
+        if (Array.isArray(codeInfoData)) {
+          setCodeInfo(codeInfoData);
+        }
       }
     }
   }, [payrollData]);
@@ -99,6 +105,17 @@ export default function Home() {
     }
     
     window.open('/api/export/json', '_blank');
+  };
+  
+  // Função para limpar os dados da tabela
+  const handleResetData = () => {
+    setProcessedData([]);
+    setCodeHeaders([]);
+    setCodeInfo([]);
+    toast({
+      title: "Dados limpos",
+      description: "Todos os dados da tabela foram removidos",
+    });
   };
 
   return (
@@ -182,8 +199,10 @@ export default function Home() {
         <ResultsTable 
           data={processedData} 
           codeHeaders={codeHeaders}
+          codeInfo={codeInfo}
           onExportCSV={handleExportCSV}
           onExportJSON={handleExportJSON}
+          onReset={handleResetData}
         />
       </main>
 
