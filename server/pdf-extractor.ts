@@ -170,27 +170,33 @@ function extractERPItems(text: string, codes: string[]): ExtractedPayrollItem[] 
 
   for (const code of codes) {
     const patterns = [
-      new RegExp(`${code}[\\s.]*([^\\n\\r]+?)\\s*R\\$\\s*(\\d+[.,]\\d{2})`, 'gi'),
-      new RegExp(`${code}[\\s.]*([^\\n\\r]+?)\\s*(\\d+[.,]\\d{2})`, 'gi'),
-      new RegExp(`${code}\\s*[-:]?\\s*([^\\n\\r]+?)\\s*R?\\$?\\s*(\\d+[.,]\\d{2})`, 'gi')
+      // More flexible patterns to match ERP format
+      new RegExp(`${code}\\s*[-.]?\\s*([^\\n\\r]*?)\\s+R?\\$?\\s*(\\d+[.,]\\d{2})`, 'gi'),
+      new RegExp(`${code}[^\\n\\r]*?\\s+(.*?)\\s+R?\\$?\\s*(\\d+[.,]\\d{2})`, 'gi'),
+      new RegExp(`${code}\\s*[-:]?\\s*([^\\n\\r]*?)\\s*R?\\$?\\s*(\\d{1,3}(?:[.,]\\d{3})*[.,]\\d{2})`, 'gi')
     ];
 
     for (const line of lines) {
+      const lineNormalized = line.replace(/\s+/g, ' ').trim();
       for (const pattern of patterns) {
-        const match = line.match(pattern);
-        if (match) {
-          const description = match[1].trim();
-          const value = parseFloat(
-            match[2].replace(/\./g, '').replace(',', '.')
-          );
+        const matches = lineNormalized.matchAll(pattern);
+        for (const match of matches) {
+          if (match && match[1] && match[2]) {
+            const description = match[1].trim();
+            const value = parseFloat(
+              match[2].replace(/\./g, '').replace(',', '.')
+            );
 
-          const existingItem = items.find(item => item.code === code);
-          if (existingItem) {
-            existingItem.value += value;
-          } else {
-            items.push({ code, description, value });
+            if (!isNaN(value) && description) {
+              const existingItem = items.find(item => item.code === code);
+              if (existingItem) {
+                existingItem.value += value;
+              } else {
+                items.push({ code, description, value });
+              }
+              break;
+            }
           }
-          break;
         }
       }
     }
