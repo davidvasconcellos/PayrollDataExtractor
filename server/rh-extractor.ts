@@ -96,15 +96,14 @@ export function extractPayrollItems(text: string, codes: string[]): ExtractedPay
       }
     }
 
-    // Agrupar por mês e somar valores
-    const monthlyTotals = new Map<string, number>();
+    // Encontrar o maior valor por mês
+    const monthlyMaxValues = new Map<string, number>();
     const descriptionByMonth = new Map<string, string>();
 
     codeMatches.forEach(match => {
-      const currentTotal = monthlyTotals.get(match.month) || 0;
-      monthlyTotals.set(match.month, currentTotal + match.value);
-      
-      if (!descriptionByMonth.has(match.month)) {
+      const currentMax = monthlyMaxValues.get(match.month) || 0;
+      if (match.value > currentMax) {
+        monthlyMaxValues.set(match.month, match.value);
         descriptionByMonth.set(match.month, match.description);
       }
     });
@@ -115,7 +114,7 @@ export function extractPayrollItems(text: string, codes: string[]): ExtractedPay
       items.push({
         code,
         description: descriptionByMonth.get(month) || '',
-        value: monthlyTotals.get(month) || 0
+        value: monthlyMaxValues.get(month) || 0
       });
     }
   }
