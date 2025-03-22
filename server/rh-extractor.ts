@@ -68,30 +68,47 @@ export function extractDate(text: string): string | null {
 export function extractPayrollItems(text: string, codes: string[]): ExtractedPayrollItem[] {
   const items: ExtractedPayrollItem[] = [];
   const lines = text.split(/[\n\r]+/);
+  const monthPattern = /\d{2}\.\d{4}/;
 
   for (const code of codes) {
-    let maxValue = 0;
-    let maxDescription = '';
+    const matches = [];
     
     for (const line of lines) {
-      const pattern = new RegExp(`(?:.*?\\s)?\\b${code}\\b[\\s.]*([^\\n\\r]+?)\\s+(?:\\d+(?:\\.\\d{2})?\\s+)?(?:\\d{2}\\.\\d{4}\\s+)?R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
+      const pattern = new RegExp(`(?:.*?\\s)?\\b${code}\\b[\\s.]*([^\\n\\r]+?)\\s+(?:\\d+(?:\\.\\d{2})?\\s+)?(\\d{2}\\.\\d{4})?\\s*R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
       const match = line.match(pattern);
 
       if (match) {
         const description = match[1].trim();
-        const valueStr = match[2].replace(/\./g, '').replace(',', '.');
+        const month = match[2] || '';
+        const valueStr = match[3].replace(/\./g, '').replace(',', '.');
         const value = parseFloat(valueStr);
 
-        console.log(`RH - Extraindo código ${code}: valor original="${match[2]}", convertido="${valueStr}", final=${value}`);
+        console.log(`RH - Extraindo código ${code}: valor original="${match[3]}", convertido="${valueStr}", final=${value}, mês=${month}`);
 
         if (!isNaN(value) && description) {
-          if (value > maxValue) {
-            maxValue = value;
-            maxDescription = description;
-          }
+          matches.push({ description, value, month });
         }
       }
     }
+
+    // Agrupa por mês e pega o maior valor de cada mês
+    const monthGroups = new Map();
+    matches.forEach(match => {
+      const currentValue = monthGroups.get(match.month)?.value || 0;
+      if (match.value > currentValue) {
+        monthGroups.set(match.month, { value: match.value, description: match.description });
+      }
+    });
+
+    // Pega o maior valor entre todos os meses
+    let maxValue = 0;
+    let maxDescription = '';
+    monthGroups.forEach((data) => {
+      if (data.value > maxValue) {
+        maxValue = data.value;
+        maxDescription = data.description;
+      }
+    });
 
     if (maxValue > 0) {
       items.push({ code, description: maxDescription, value: maxValue });
