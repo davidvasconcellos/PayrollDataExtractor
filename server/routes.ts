@@ -325,7 +325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       payrollData.forEach(data => {
         uniqueDates.add(data.date);
         
-        const items = JSON.parse(data.codeData) as ExtractedPayrollItem[];
+        const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
         items.forEach(item => {
           uniqueCodes.add(item.code);
           codeDescriptions.set(item.code, item.description);
@@ -354,7 +354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           payrollData
             .filter(data => data.date === date)
             .forEach(data => {
-              const items = JSON.parse(data.codeData) as ExtractedPayrollItem[];
+              const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
               const item = items.find(i => i.code === code);
               
               if (item) {
@@ -397,7 +397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       payrollData.forEach(data => {
         uniqueDates.add(data.date);
         
-        const items = JSON.parse(data.codeData) as ExtractedPayrollItem[];
+        const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
         items.forEach(item => {
           uniqueCodes.add(item.code);
           codeDescriptions.set(item.code, item.description);
@@ -416,7 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           payrollData
             .filter(data => data.date === date)
             .forEach(data => {
-              const items = JSON.parse(data.codeData) as ExtractedPayrollItem[];
+              const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
               const item = items.find(i => i.code === code);
               
               if (item) {
