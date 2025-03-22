@@ -2,7 +2,8 @@ import express, { type Express, Request, Response, NextFunction } from "express"
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import multer from "multer";
-import { processPDF, PDFSource } from "./pdf-extractor";
+import { processPDF as processERPPDF, PDFSource } from "./pdf-extractor";
+import { processPDF as processRHPDF } from "./rh-extractor";
 import { ExtractedPayrollItem, PayrollResult, ProcessedPayslip, User } from "@shared/schema";
 import { z } from "zod";
 import session from 'express-session';
@@ -334,7 +335,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       console.log('Processando PDF com códigos:', codesList);
-      const results = await processPDF(req.file.buffer, codesList, source as PDFSource);
+      const results = source === 'ERP' 
+        ? await processERPPDF(req.file.buffer, codesList, source as PDFSource)
+        : await processRHPDF(req.file.buffer, codesList);
       console.log('Resultado do processamento (múltiplas páginas):', JSON.stringify(results, null, 2));
       
       // Processar e salvar cada resultado (uma página do PDF)
