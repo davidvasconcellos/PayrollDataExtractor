@@ -1,11 +1,17 @@
 
 import { ExtractedPayrollItem, ProcessedPayslip } from '@shared/schema';
 import * as pdfjsLib from 'pdfjs-dist';
+import { fileURLToPath } from 'url';
+import path from 'path';
+
+// Initialize worker for Node environment
+const pdfjsWorker = require('pdfjs-dist/build/pdf.worker.js');
+if (typeof window === 'undefined') {
+  const pdfjsVersion = require('pdfjs-dist/package.json').version;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = pdfjsWorker;
+}
 
 export type PDFSource = 'ERP' | 'RH';
-
-// Initialize worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
 async function getDocument(pdfBuffer: Buffer) {
   return pdfjsLib.getDocument({
