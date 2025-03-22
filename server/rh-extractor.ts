@@ -70,9 +70,11 @@ export function extractPayrollItems(text: string, codes: string[]): ExtractedPay
   const lines = text.split(/[\n\r]+/);
 
   for (const code of codes) {
+    const codeMatches: { description: string; value: number }[] = [];
+    
     for (const line of lines) {
       // Padrão ajustado para RH que pode ter descrições antes do código
-      const pattern = new RegExp(`(?:.*?\\s)?\\b${code}\\b[\\s.]*([^\\n\\r]+?)\\s+R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
+      const pattern = new RegExp(`(?:.*?\\s)?\\b${code}\\b[\\s.]*([^\\n\\r]+?)\\s+(?:\\d+(?:[.,]\\d{2}))?\\.?\\d{2}\\s+(?:\\d{2}\\.\\d{4}\\s+)?R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
       const match = line.match(pattern);
 
       if (match) {
@@ -83,13 +85,24 @@ export function extractPayrollItems(text: string, codes: string[]): ExtractedPay
         console.log(`RH - Extraindo código ${code}: valor original="${match[2]}", convertido="${valueStr}", final=${value}`);
 
         if (!isNaN(value) && description) {
-          const existingItem = items.find(item => item.code === code);
-          if (existingItem) {
-            existingItem.value += value;
-          } else {
-            items.push({ code, description, value });
-          }
+          codeMatches.push({ description, value });
         }
+      }
+    }
+
+    // Se encontrou matches para este código
+    if (codeMatches.length > 0) {
+      // Soma todos os valores do mesmo código
+      const totalValue = codeMatches.reduce((sum, item) => sum + item.value, 0);
+      // Usa a descrição do primeiro item encontrado
+      items.push({ 
+        code, 
+        description: codeMatches[0].description, 
+        value: totalValue 
+      });
+      
+      if (codeMatches.length > 1) {
+        console.log(`RH - Código ${code} apareceu ${codeMatches.length} vezes. Valor total: ${totalValue}`);
       }
     }
   }
