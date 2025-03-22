@@ -15,11 +15,12 @@ export async function extractTextFromPDF(pdfBuffer: Buffer): Promise<PDFPage[]> 
   console.log("Iniciando extração de padrões de texto do PDF...");
   
   try {
-    // Extrair texto do PDF usando uma técnica de busca de padrões no buffer
-    // Convert buffer to string (limited to readable ASCII characters)
-    const text = pdfBuffer.toString('utf-8', 0, Math.min(pdfBuffer.length, 20000))
+    // Extrair texto do PDF usando uma técnica mais robusta
+    const text = pdfBuffer.toString('utf-8')
       .replace(/\\u[0-9a-f]{4}/g, '')
-      .replace(/[^\x20-\x7E\n\r\t]/g, ' ');
+      .replace(/[^\x20-\x7E\n\r\t]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
     
     // Estimar número de páginas com base no tamanho do PDF 
     // (heurística simples: aproximadamente 4000 bytes por página)
@@ -169,8 +170,9 @@ function extractERPItems(text: string, codes: string[]): ExtractedPayrollItem[] 
 
   for (const code of codes) {
     const patterns = [
-      new RegExp(`${code}[\\s.]+([^\\n\\r]+?)\\s+R\\$\\s*(\\d+[.,]\\d{2})`, 'i'),
-      new RegExp(`${code}[\\s.]+([^\\n\\r]+?)\\s+(\\d+[.,]\\d{2})`, 'i')
+      new RegExp(`${code}[\\s.]*([^\\n\\r]+?)\\s*R\\$\\s*(\\d+[.,]\\d{2})`, 'gi'),
+      new RegExp(`${code}[\\s.]*([^\\n\\r]+?)\\s*(\\d+[.,]\\d{2})`, 'gi'),
+      new RegExp(`${code}\\s*[-:]?\\s*([^\\n\\r]+?)\\s*R?\\$?\\s*(\\d+[.,]\\d{2})`, 'gi')
     ];
 
     for (const line of lines) {

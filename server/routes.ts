@@ -280,6 +280,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(200).json(results[0] || { date: '', items: [], source });
     } catch (error) {
       console.error("PDF processing error:", error);
+      console.log("PDF content sample:", req.file.buffer.toString('utf-8').substring(0, 1000));
       res.status(500).json({ message: "Failed to process PDF" });
     }
   });
