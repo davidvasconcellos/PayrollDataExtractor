@@ -108,14 +108,40 @@ export default function Home() {
   };
   
   // Função para limpar os dados da tabela
-  const handleResetData = () => {
-    setProcessedData([]);
-    setCodeHeaders([]);
-    setCodeInfo([]);
-    toast({
-      title: "Dados limpos",
-      description: "Todos os dados da tabela foram removidos",
-    });
+  const handleResetData = async () => {
+    try {
+      // Limpa os dados no servidor através da API
+      const response = await fetch('/api/payroll-data/clear', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao limpar dados no servidor');
+      }
+      
+      // Limpa os dados na interface
+      setProcessedData([]);
+      setCodeHeaders([]);
+      setCodeInfo([]);
+      
+      toast({
+        title: "Dados limpos com sucesso",
+        description: "Todos os dados foram removidos permanentemente",
+      });
+      
+      // Atualiza a visualização
+      refetchPayrollData();
+    } catch (error) {
+      console.error("Erro ao limpar dados:", error);
+      toast({
+        variant: "destructive",
+        title: "Erro ao limpar dados",
+        description: "Não foi possível limpar os dados. Tente novamente.",
+      });
+    }
   };
 
   return (

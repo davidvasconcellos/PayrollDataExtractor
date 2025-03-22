@@ -82,12 +82,17 @@ function extractERPItems(text: string, codes: string[]): ExtractedPayrollItem[] 
 
   for (const code of codes) {
     for (const line of lines) {
-      const pattern = new RegExp(`${code}\\s*[-.]?\\s*([^\\n\\r]*?)\\s+R?\\$?\\s*(\\d+[.,]\\d{2})`, 'i');
+      // Padrão melhorado para capturar valores com separador de milhar (ponto)
+      const pattern = new RegExp(`${code}\\s*[-.]?\\s*([^\\n\\r]*?)\\s+R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
       const match = line.match(pattern);
 
       if (match) {
         const description = match[1].trim();
-        const value = parseFloat(match[2].replace(/\./g, '').replace(',', '.'));
+        // Convertendo valor corretamente: remove pontos e substitui vírgula por ponto
+        const valueStr = match[2].replace(/\./g, '').replace(',', '.');
+        const value = parseFloat(valueStr);
+
+        console.log(`Extraindo código ${code}: valor original="${match[2]}", convertido="${valueStr}", final=${value}`);
 
         if (!isNaN(value) && description) {
           const existingItem = items.find(item => item.code === code);
@@ -110,12 +115,17 @@ function extractRHItems(text: string, codes: string[]): ExtractedPayrollItem[] {
 
   for (const code of codes) {
     for (const line of lines) {
-      const pattern = new RegExp(`${code}[\\s.]+([^\\n\\r]+?)\\s+R?\\$?\\s*(\\d+[.,]\\d{2})`, 'i');
+      // Padrão melhorado para capturar valores com separador de milhar (ponto)
+      const pattern = new RegExp(`${code}[\\s.]+([^\\n\\r]+?)\\s+R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
       const match = line.match(pattern);
 
       if (match) {
         const description = match[1].trim();
-        const value = parseFloat(match[2].replace(/\./g, '').replace(',', '.'));
+        // Convertendo valor corretamente: remove pontos e substitui vírgula por ponto
+        const valueStr = match[2].replace(/\./g, '').replace(',', '.');
+        const value = parseFloat(valueStr);
+
+        console.log(`Extraindo código ${code}: valor original="${match[2]}", convertido="${valueStr}", final=${value}`);
 
         if (!isNaN(value) && description) {
           const existingItem = items.find(item => item.code === code);
