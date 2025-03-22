@@ -63,7 +63,7 @@
     "passport-local": "^1.0.0",
     "pdf-lib": "^1.17.1",
     "pdf2json": "^3.1.5",
-    "pdfjs-dist": "^2.16.105",
+    "pdfjs-dist": "^2.10.377",
     "pdfreader": "^3.0.7",
     "react": "^18.3.1",
     "react-day-picker": "^8.10.1",
@@ -96,13 +96,13 @@
     "@types/ws": "^8.5.13",
     "@vitejs/plugin-react": "^4.3.2",
     "autoprefixer": "^10.4.20",
-    "drizzle-kit": "^0.30.4",
+    "drizzle-kit": "^0.18.1",
     "esbuild": "^0.25.0",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",
     "tsx": "^4.19.1",
     "typescript": "5.6.3",
-    "vite": "^5.4.14"
+    "vite": "^6.2.2"
   },
   "optionalDependencies": {
     "bufferutil": "^4.0.8"

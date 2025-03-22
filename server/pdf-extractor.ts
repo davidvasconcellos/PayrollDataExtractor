@@ -1,5 +1,8 @@
+//import { ExtractedPayrollItem, ProcessedPayslip } from '@shared/schema';
+//import * as pdfjsLib from 'pdfjs-dist';
 import { ExtractedPayrollItem, ProcessedPayslip } from '@shared/schema';
-import * as pdfjsLib from 'pdfjs-dist';
+import pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
+import 'pdfjs-dist/legacy/build/pdf.worker.entry';
 
 export type PDFSource = 'ERP' | 'RH';
 
