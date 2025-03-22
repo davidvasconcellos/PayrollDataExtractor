@@ -93,7 +93,7 @@ export function extractPayrollItems(text: string, codes: string[]): ExtractedPay
       }
     }
     }
-  }
+  
 
   return items;
 }
