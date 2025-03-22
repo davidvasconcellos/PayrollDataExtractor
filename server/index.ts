@@ -2,7 +2,6 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { rateLimiter, securityHeaders, csp, validatePDF, cleanupPDFData } from "./security";
 import { privacyHeaders, auditLog } from "./privacy-policy";
-import { setupVite, serveStatic, log } from "./vite";
 //codígo antes da alteração
 const app = express();
 app.use(express.json());
