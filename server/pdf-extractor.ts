@@ -82,8 +82,9 @@ function extractERPItems(text: string, codes: string[]): ExtractedPayrollItem[] 
 
   for (const code of codes) {
     for (const line of lines) {
-      // Padrão melhorado para capturar valores com separador de milhar (ponto)
-      const pattern = new RegExp(`${code}\\s*[-.]?\\s*([^\\n\\r]*?)\\s+R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
+      // Padrão melhorado para garantir correspondência exata do código e capturar valores com separador de milhar (ponto)
+      // \b adicionado para garantir limites de palavra no início e fim do código
+      const pattern = new RegExp(`\\b${code}\\b\\s*[-.]?\\s*([^\\n\\r]*?)\\s+R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
       const match = line.match(pattern);
 
       if (match) {
@@ -115,8 +116,9 @@ function extractRHItems(text: string, codes: string[]): ExtractedPayrollItem[] {
 
   for (const code of codes) {
     for (const line of lines) {
-      // Padrão melhorado para capturar valores com separador de milhar (ponto)
-      const pattern = new RegExp(`${code}[\\s.]+([^\\n\\r]+?)\\s+R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
+      // Padrão melhorado para garantir correspondência exata do código e capturar valores com separador de milhar (ponto)
+      // \b adicionado para garantir limites de palavra no início e fim do código
+      const pattern = new RegExp(`\\b${code}\\b[\\s.]+([^\\n\\r]+?)\\s+R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
       const match = line.match(pattern);
 
       if (match) {
