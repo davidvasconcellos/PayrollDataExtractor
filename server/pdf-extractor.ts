@@ -1,4 +1,3 @@
-
 import { ExtractedPayrollItem, ProcessedPayslip } from '@shared/schema';
 import pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 import 'pdfjs-dist/legacy/build/pdf.worker.entry';
@@ -20,7 +19,7 @@ export async function extractTextFromPDF(pdfBuffer: Buffer): Promise<PDFPage[]> 
     // Carrega o PDF usando pdf.js
     const pdf = await pdfjsLib.getDocument({ data: pdfBuffer }).promise;
     const pages: PDFPage[] = [];
-    
+
     // Extrai texto de cada página
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
@@ -64,27 +63,6 @@ function extractERPDate(text: string): string | null {
   return null;
 }
 
-// Função para extrair a data de um texto RH baseado em nomes de meses
-// function extractRHDate(text: string): string | null {
-//   // Mapeamento de nomes de meses para números
-//   const monthMap: { [key: string]: string } = {
-//     'janeiro': '01', 'fevereiro': '02', 'março': '03', 'marco': '03',
-//     'abril': '04', 'maio': '05', 'junho': '06', 'julho': '07',
-//     'agosto': '08', 'setembro': '09', 'outubro': '10',
-//     'novembro': '11', 'dezembro': '12'
-//   };
-
-//   const monthPattern = Object.keys(monthMap).join('|');
-//   const pattern = new RegExp(`(${monthPattern})[\/\\s]*de[\\s]*?(\\d{4})`, 'i');
-
-//   const match = text.match(pattern);
-//   if (match) {
-//     const month = monthMap[match[1].toLowerCase()];
-//     return `${month}/${match[2]}`;
-//   }
-//   return null;
-// }
-
 // Função para extrair itens de folha de pagamento de textos ERP
 function extractERPItems(text: string, codes: string[]): ExtractedPayrollItem[] {
   const items: ExtractedPayrollItem[] = [];
@@ -119,52 +97,15 @@ function extractERPItems(text: string, codes: string[]): ExtractedPayrollItem[] 
   return items;
 }
 
-// Função para extrair itens de folha de pagamento de textos RH
-// function extractRHItems(text: string, codes: string[]): ExtractedPayrollItem[] {
-//   const items: ExtractedPayrollItem[] = [];
-//   const lines = text.split(/[\n\r]+/);
-
-//   for (const code of codes) {
-//     for (const line of lines) {
-//       // Padrão específico para formato RH
-//       const pattern = new RegExp(`\\b${code}\\b[\\s.]+([^\\n\\r]+?)\\s+R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
-//       const match = line.match(pattern);
-
-//       if (match) {
-//         const description = match[1].trim();
-//         const valueStr = match[2].replace(/\./g, '').replace(',', '.');
-//         const value = parseFloat(valueStr);
-
-//         console.log(`Extraindo código ${code}: valor original="${match[2]}", convertido="${valueStr}", final=${value}`);
-
-//         if (!isNaN(value) && description) {
-//           const existingItem = items.find(item => item.code === code);
-//           if (existingItem) {
-//             existingItem.value += value;
-//           } else {
-//             items.push({ code, description, value });
-//           }
-//         }
-//       }
-//     }
-//   }
-
-//   return items;
-// }
-
 // Função auxiliar para extrair data baseada na fonte do PDF
 export function extractDate(text: string, source: PDFSource): string | null {
-  return source === 'ERP' ? extractERPDate(text) : extractRHDate(text);
+  return source === 'ERP' ? extractERPDate(text) : null;
 }
 
 // Funções exportadas para extração de itens baseadas na fonte
 export function extractERPPayrollItems(text: string, codes: string[]): ExtractedPayrollItem[] {
   return extractERPItems(text, codes);
 }
-
-// export function extractRHPayrollItems(text: string, codes: string[]): ExtractedPayrollItem[] {
-//   return extractRHItems(text, codes);
-// }
 
 // Função principal para processar o PDF
 export async function processPDF(
@@ -192,9 +133,7 @@ export async function processPDF(
       console.log('Data extraída:', date);
 
       // Extrai itens baseado na fonte do PDF
-      const items = source === 'ERP' 
-        ? extractERPPayrollItems(page.text, codes);
-        // : extractRHPayrollItems(page.text, codes);
+      const items = extractERPPayrollItems(page.text, codes);
 
       console.log(`Encontrados ${items.length} itens na página ${page.pageNumber}`);
 
