@@ -67,28 +67,25 @@ function extractERPDate(text: string): string | null {
 function extractERPItems(text: string, codes: string[]): ExtractedPayrollItem[] {
   const items: ExtractedPayrollItem[] = [];
   const lines = text.split(/[\n\r]+/);
-  const duplicateCheck = new Map<string, number>();
 
   for (const code of codes) {
-    duplicateCheck.clear();
-    
     for (const line of lines) {
+      // Padrão para encontrar códigos e valores
       const pattern = new RegExp(`\\b${code}\\b\\s*[-.]?\\s*([^\\n\\r]*?)\\s+R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
       const match = line.match(pattern);
 
       if (match) {
         const description = match[1].trim();
+        // Converte valor para formato numérico
         const valueStr = match[2].replace(/\./g, '').replace(',', '.');
         const value = parseFloat(valueStr);
 
+        console.log(`Extraindo código ${code}: valor original="${match[2]}", convertido="${valueStr}", final=${value}`);
+
         if (!isNaN(value) && description) {
-          const count = (duplicateCheck.get(code) || 0) + 1;
-          duplicateCheck.set(code, count);
-          
-          if (count > 1) {
-            console.log(`Encontrada verba repetida: ${code} (${description})`);
-            const descriptionWithCount = `${description}(${count})`;
-            items.push({ code, description: descriptionWithCount, value });
+          const existingItem = items.find(item => item.code === code);
+          if (existingItem) {
+            existingItem.value += value;
           } else {
             items.push({ code, description, value });
           }
