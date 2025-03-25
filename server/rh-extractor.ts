@@ -79,15 +79,12 @@ export function extractDate(text: string): string | null {
 export function extractPayrollItems(text: string, codes: string[]): ExtractedPayrollItem[] {
   const items: ExtractedPayrollItem[] = [];
   const lines = text.split(/[\n\r]+/);
+  const duplicateCheck = new Map<string, number>();
 
-  // Processa cada código fornecido
   for (const code of codes) {
-    const matches = [];
-    let count = 0;
+    duplicateCheck.clear();
     
-    // Analisa cada linha do texto
     for (const line of lines) {
-      // Padrão para encontrar informações do item de folha de pagamento
       const pattern = new RegExp(`(?:.*?\\s)?\\b${code}\\b[\\s.]*([^\\n\\r]+?)\\s+(?:\\d+(?:\\.\\d{2})?\\s+)?(\\d{2}\\.\\d{4})?\\s*R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
       const match = line.match(pattern);
 
@@ -97,12 +94,17 @@ export function extractPayrollItems(text: string, codes: string[]): ExtractedPay
         const valueStr = match[3].replace(/\./g, '').replace(',', '.');
         const value = parseFloat(valueStr);
 
-        console.log(`RH - Extraindo código ${code}: valor original="${match[3]}", convertido="${valueStr}", final=${value}, mês=${month}`);
-
         if (!isNaN(value) && description) {
-          count++;
-          const descriptionWithCount = count > 1 ? `${description}(${count})` : description;
-          items.push({ code, description: descriptionWithCount, value });
+          const count = (duplicateCheck.get(code) || 0) + 1;
+          duplicateCheck.set(code, count);
+          
+          if (count > 1) {
+            console.log(`RH - Encontrada verba repetida: ${code} (${description})`);
+            const descriptionWithCount = `${description}(${count})`;
+            items.push({ code, description: descriptionWithCount, value });
+          } else {
+            items.push({ code, description, value });
+          }
         }
       }
     }
