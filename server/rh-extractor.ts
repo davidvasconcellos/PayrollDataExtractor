@@ -118,15 +118,13 @@ export async function processPDF(pdfBuffer: Buffer, codes: string[]): Promise<Pr
   try {
     console.log(`Processando PDF RH`, codes);
 
-    // Extrai texto de todas as páginas
     const pages = await extractTextFromPDF(pdfBuffer);
-    const results: ProcessedPayslip[] = [];
+    const groupedByDate = new Map<string, ExtractedPayrollItem[]>();
 
-    // Processa cada página individualmente
+    // Primeiro passo: agrupar todos os itens por data
     for (const page of pages) {
       console.log(`Processando página RH ${page.pageNumber}`);
 
-      // Extrai a data da página
       const date = extractDate(page.text);
       if (!date) {
         console.log(`Data não encontrada na página ${page.pageNumber}`);
@@ -134,13 +132,38 @@ export async function processPDF(pdfBuffer: Buffer, codes: string[]): Promise<Pr
       }
       console.log('Data extraída RH:', date);
 
-      // Extrai os itens de folha de pagamento
       const items = extractPayrollItems(page.text, codes);
       console.log(`Encontrados ${items.length} itens na página RH ${page.pageNumber}`);
 
       if (items.length > 0) {
-        results.push({ date, items, source: 'RH' });
+        if (!groupedByDate.has(date)) {
+          groupedByDate.set(date, []);
+        }
+        groupedByDate.get(date)?.push(...items);
       }
+    }
+
+    // Segundo passo: consolidar itens duplicados por data
+    const results: ProcessedPayslip[] = [];
+    for (const [date, items] of groupedByDate.entries()) {
+      const consolidatedItems = new Map<string, ExtractedPayrollItem>();
+      
+      for (const item of items) {
+        const key = `${item.code}-${item.description}`;
+        if (consolidatedItems.has(key)) {
+          const existing = consolidatedItems.get(key)!;
+          existing.value += item.value;
+          console.log(`RH - Somando valores para ${item.code}: ${existing.value}`);
+        } else {
+          consolidatedItems.set(key, { ...item });
+        }
+      }
+
+      results.push({
+        date,
+        items: Array.from(consolidatedItems.values()),
+        source: 'RH'
+      });
     }
 
     console.log(`Processamento RH finalizado. Encontrados ${results.length} conjuntos de dados.`);
