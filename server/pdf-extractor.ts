@@ -119,13 +119,15 @@ export async function processPDF(
   try {
     console.log(`Processando PDF de fonte ${source}`, codes);
 
+    // Extrai texto de todas as páginas
     const pages = await extractTextFromPDF(pdfBuffer);
-    const groupedByDate = new Map<string, ExtractedPayrollItem[]>();
+    const results: ProcessedPayslip[] = [];
 
-    // Primeiro passo: agrupar todos os itens por data
+    // Processa cada página individualmente
     for (const page of pages) {
       console.log(`Processando página ${page.pageNumber}`);
 
+      // Extrai a data da página
       const date = extractDate(page.text, source);
       if (!date) {
         console.log(`Data não encontrada na página ${page.pageNumber}`);
@@ -133,38 +135,14 @@ export async function processPDF(
       }
       console.log('Data extraída:', date);
 
+      // Extrai itens baseado na fonte do PDF
       const items = extractERPPayrollItems(page.text, codes);
+
       console.log(`Encontrados ${items.length} itens na página ${page.pageNumber}`);
 
       if (items.length > 0) {
-        if (!groupedByDate.has(date)) {
-          groupedByDate.set(date, []);
-        }
-        groupedByDate.get(date)?.push(...items);
+        results.push({ date, items, source });
       }
-    }
-
-    // Segundo passo: consolidar itens duplicados por data
-    const results: ProcessedPayslip[] = [];
-    for (const [date, items] of groupedByDate.entries()) {
-      const consolidatedItems = new Map<string, ExtractedPayrollItem>();
-      
-      for (const item of items) {
-        const key = `${item.code}-${item.description}`;
-        if (consolidatedItems.has(key)) {
-          const existing = consolidatedItems.get(key)!;
-          existing.value += item.value;
-          console.log(`Somando valores para ${item.code}: ${existing.value}`);
-        } else {
-          consolidatedItems.set(key, { ...item });
-        }
-      }
-
-      results.push({
-        date,
-        items: Array.from(consolidatedItems.values()),
-        source
-      });
     }
 
     console.log(`Processamento finalizado. Encontrados ${results.length} conjuntos de dados.`);
