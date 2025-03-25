@@ -1,3 +1,4 @@
+
 import express, { type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
@@ -9,15 +10,15 @@ import { z } from "zod";
 import session from 'express-session';
 import createMemoryStore from 'memorystore';
 
-// Setup multer for file uploads
+// Configuração do multer para upload de arquivos
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10 MB
+    fileSize: 10 * 1024 * 1024, // Limite de 10 MB
   },
 });
 
-// Extend Express Request type
+// Extensão dos tipos do Express para incluir sessão e usuário
 declare module 'express-session' {
   interface SessionData {
     userId?: number;
@@ -32,28 +33,29 @@ declare global {
   }
 }
 
+// Função principal para registrar todas as rotas da aplicação
 export async function registerRoutes(app: Express): Promise<Server> {
   const router = express.Router();
   const MemoryStore = createMemoryStore(session);
 
-  // Configure session
+  // Configuração da sessão
   app.use(session({
-    cookie: { maxAge: 86400000 }, // 24 hours
+    cookie: { maxAge: 86400000 }, // 24 horas
     store: new MemoryStore({
-      checkPeriod: 86400000 // prune expired entries every 24h
+      checkPeriod: 86400000 // Limpa entradas expiradas a cada 24h
     }),
     secret: 'contracheque-secret-key',
     resave: false,
     saveUninitialized: false
   }));
 
-  // Auth middleware
+  // Middleware de autenticação
   const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.session.userId;
 
+      // Cria usuário padrão se necessário
       if (!userId) {
-        // Create default user if none exists
         const defaultUser = await storage.createUser({
           username: 'default',
           password: 'default'
@@ -63,9 +65,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return next();
       }
 
+      // Verifica se o usuário existe
       const user = await storage.getUser(userId);
       if (!user) {
-        // Create default user if none exists
         const defaultUser = await storage.createUser({
           username: 'default',
           password: 'default'
@@ -83,7 +85,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   };
 
-  // Authentication routes
+  // Rotas de autenticação
   router.post("/auth/login", async (req: Request, res: Response) => {
     const { username, password } = req.body;
 
@@ -101,7 +103,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
 
-    // Set user ID in session
     req.session.userId = user.id;
 
     return res.status(200).json({ 
@@ -110,16 +111,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Rota de logout
   router.post("/auth/logout", (req: Request, res: Response) => {
     req.session.destroy((err) => {
       if (err) {
         return res.status(500).json({ message: "Failed to logout" });
       }
-
       res.status(200).json({ message: "Logged out successfully" });
     });
   });
 
+  // Rota para verificar autenticação
   router.get("/auth/check", requireAuth, (req: Request, res: Response) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -131,7 +133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
-  // Template management routes
+  // Rotas de gerenciamento de templates
   router.get("/templates", requireAuth, async (req: Request, res: Response) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -141,6 +143,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(200).json(templates);
   });
 
+  // Criar novo template
   router.post("/templates", requireAuth, async (req: Request, res: Response) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -166,6 +169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Atualizar template existente
   router.put("/templates/:id", requireAuth, async (req: Request, res: Response) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -197,6 +201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Excluir template
   router.delete("/templates/:id", requireAuth, async (req: Request, res: Response) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -217,7 +222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(200).json({ message: "Template deleted successfully" });
   });
 
-  // Code Group routes
+  // Rotas de grupos de códigos
   router.get("/code-groups", requireAuth, async (req: Request, res: Response) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -227,6 +232,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(200).json(codeGroups);
   });
 
+  // Criar novo grupo de códigos
   router.post("/code-groups", requireAuth, async (req: Request, res: Response) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -252,6 +258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Atualizar grupo de códigos
   router.put("/code-groups/:id", requireAuth, async (req: Request, res: Response) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -283,6 +290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Excluir grupo de códigos
   router.delete("/code-groups/:id", requireAuth, async (req: Request, res: Response) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -303,7 +311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(200).json({ message: "Code group deleted successfully" });
   });
 
-  // PDF processing routes
+  // Rota para processar PDF
   router.post("/process-pdf", requireAuth, upload.single("pdf"), async (req: Request, res: Response) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -319,12 +327,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(400).json({ message: "Source and codes are required" });
     }
 
-    // Validate source
+    // Validação da fonte
     if (source !== "ERP" && source !== "RH") {
       return res.status(400).json({ message: "Invalid source. Must be 'ERP' or 'RH'" });
     }
 
-    // Parse codes
+    // Processamento dos códigos
     console.log('Códigos recebidos:', codes);
     const codesList = (codes as string).split(/[\s,]+/).filter(Boolean);
     console.log('Códigos processados:', codesList);
@@ -340,10 +348,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         : await processRHPDF(req.file.buffer, codesList);
       console.log('Resultado do processamento (múltiplas páginas):', JSON.stringify(results, null, 2));
 
-      // Processar e salvar cada resultado (uma página do PDF)
+      // Processamento e salvamento dos resultados
       let successCount = 0;
 
-      // Salvar cada resultado separadamente
       for (const result of results) {
         if (result.date && result.items.length > 0) {
           console.log(`Salvando dados processados da data ${result.date} na base`);
@@ -365,7 +372,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`${successCount} páginas do PDF foram processadas com sucesso`);
       }
 
-      // Retorna todos os resultados processados
       res.status(200).json(results[0] || { date: '', items: [], source });
     } catch (error) {
       console.error("PDF processing error:", error);
@@ -374,7 +380,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get consolidated payroll data
+  // Rota para obter dados consolidados da folha de pagamento
   router.get("/payroll-data", requireAuth, async (req: Request, res: Response) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -382,11 +388,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const payrollData = await storage.getPayrollDataByUserId(req.user.id);
-
-      // Buscar grupos de código do usuário
       const codeGroups = await storage.getCodeGroupsByUserId(req.user.id);
 
-      // Criar mapeamento de código para seu grupo exibido
+      // Mapeamento de códigos para exibição
       const codeToDisplayMap = new Map<string, string>();
       codeGroups.forEach(group => {
         const codes = group.codes.split(/[\s,]+/).filter(Boolean);
@@ -395,25 +399,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
 
-      // Transform into a consolidated format
+      // Consolidação dos dados
       const consolidatedData: PayrollResult[] = [];
       const uniqueDates = new Set<string>();
       const uniqueDisplayCodes = new Set<string>();
       const codeDescriptions = new Map<string, string>();
 
-      // Collect all unique dates and codes with their descriptions
+      // Coleta de datas e códigos únicos
       payrollData.forEach(data => {
         uniqueDates.add(data.date);
 
         const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
         items.forEach(item => {
-          // Verifica se o código tem um mapeamento de exibição
           const displayCode = codeToDisplayMap.get(item.code) || item.code;
           uniqueDisplayCodes.add(displayCode);
 
-          // Armazena descrição para cada código de exibição
           if (item.description) {
-            // Se o código for mapeado, usamos o nome do grupo como descrição
             if (codeToDisplayMap.has(item.code)) {
               codeDescriptions.set(displayCode, displayCode);
             } else {
@@ -423,16 +424,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
 
-      // Create consolidated results
+      // Criação dos resultados consolidados
       uniqueDates.forEach(date => {
         const result: PayrollResult = { date };
 
-        // Initialize all display codes with 0
         uniqueDisplayCodes.forEach(displayCode => {
           result[displayCode] = 0;
         });
 
-        // Fill in actual values, agrupando por código de exibição
         payrollData
           .filter(data => data.date === date)
           .forEach(data => {
@@ -440,7 +439,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             items.forEach(item => {
               const displayCode = codeToDisplayMap.get(item.code) || item.code;
-              // Soma valores para códigos agrupados
               result[displayCode] = (result[displayCode] as number) + item.value;
             });
           });
@@ -448,7 +446,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         consolidatedData.push(result);
       });
 
-      // Converte o Map de descrições para um objeto para enviar no JSON
       const codeInfo = Array.from(uniqueDisplayCodes).map(displayCode => ({
         code: displayCode,
         description: codeDescriptions.get(displayCode) || displayCode
@@ -465,7 +462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Clear all payroll data for current user
+  // Rota para limpar dados da folha de pagamento
   router.post("/payroll-data/clear", requireAuth, async (req: Request, res: Response) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -485,7 +482,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate CSV export
+  // Rota para exportar CSV
   router.get("/export/csv", requireAuth, async (req: Request, res: Response) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -493,11 +490,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const payrollData = await storage.getPayrollDataByUserId(req.user.id);
-
-      // Buscar grupos de código do usuário
       const codeGroups = await storage.getCodeGroupsByUserId(req.user.id);
 
-      // Criar mapeamento de código para seu grupo exibido
+      // Mapeamento de códigos
       const codeToDisplayMap = new Map<string, string>();
       codeGroups.forEach(group => {
         const codes = group.codes.split(/[\s,]+/).filter(Boolean);
@@ -506,30 +501,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
 
-      // Transform into a consolidated format
+      // Preparação dos dados para CSV
       const uniqueDates = new Set<string>();
       const uniqueDisplayCodes = new Set<string>();
       const codeDescriptions = new Map<string, string>();
       const consolidatedByDate = new Map<string, Map<string, number>>();
 
-      // Collect all unique dates and codes with their descriptions
       payrollData.forEach(data => {
         uniqueDates.add(data.date);
 
-        // Inicializar mapa para esta data se não existir
         if (!consolidatedByDate.has(data.date)) {
           consolidatedByDate.set(data.date, new Map<string, number>());
         }
 
         const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
         items.forEach(item => {
-          // Verifica se o código tem um mapeamento de exibição
           const displayCode = codeToDisplayMap.get(item.code) || item.code;
           uniqueDisplayCodes.add(displayCode);
 
-          // Armazena descrição para cada código de exibição
           if (item.description) {
-            // Se o código for mapeado, usamos o nome do grupo como descrição
             if (codeToDisplayMap.has(item.code)) {
               codeDescriptions.set(displayCode, displayCode);
             } else {
@@ -537,14 +527,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
 
-          // Soma valores agrupados para cada data
           const dateValues = consolidatedByDate.get(data.date)!;
           const currentValue = dateValues.get(displayCode) || 0;
           dateValues.set(displayCode, currentValue + item.value);
         });
       });
 
-      // Create CSV header
+      // Geração do CSV
       let csv = "DATA";
       const displayCodesArray = Array.from(uniqueDisplayCodes);
 
@@ -555,15 +544,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       csv += "\n";
 
-      // Create CSV rows
       uniqueDates.forEach(date => {
         let row = date;
         const dateValues = consolidatedByDate.get(date)!;
 
         displayCodesArray.forEach(displayCode => {
           const value = dateValues.get(displayCode) || 0;
-
-          // Format value as currency (R$ X.XXX,XX)
           const formattedValue = `R$ ${value.toFixed(2).replace('.', ',')}`;
           row += `;${formattedValue}`;
         });
@@ -580,7 +566,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Generate JSON export
+  // Rota para exportar JSON
   router.get("/export/json", requireAuth, async (req: Request, res: Response) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -588,11 +574,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const payrollData = await storage.getPayrollDataByUserId(req.user.id);
-
-      // Buscar grupos de código do usuário
       const codeGroups = await storage.getCodeGroupsByUserId(req.user.id);
 
-      // Criar mapeamento de código para seu grupo exibido
+      // Mapeamento de códigos
       const codeToDisplayMap = new Map<string, string>();
       codeGroups.forEach(group => {
         const codes = group.codes.split(/[\s,]+/).filter(Boolean);
@@ -601,59 +585,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
 
-      // Transform into a consolidated format
+      // Preparação dos dados para JSON
       const uniqueDates = new Set<string>();
       const uniqueDisplayCodes = new Set<string>();
       const codeDescriptions = new Map<string, string>();
       const consolidatedByDate = new Map<string, Map<string, number>>();
       const consolidatedData: any[] = [];
 
-      // Collect all unique dates and codes with their descriptions
       payrollData.forEach(data => {
         uniqueDates.add(data.date);
 
-        // Inicializar mapa para esta data se não existir
         if (!consolidatedByDate.has(data.date)) {
           consolidatedByDate.set(data.date, new Map<string, number>());
         }
 
         const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
         items.forEach(item => {
-          // Verifica se o código tem um mapeamento de exibição
           const displayCode = codeToDisplayMap.get(item.code) || item.code;
           uniqueDisplayCodes.add(displayCode);
 
-          // Armazena descrição para cada código de exibição
           if (item.description) {
-            // Se o código for mapeado, usamos o nome do grupo como descrição
             if (codeToDisplayMap.has(item.code)) {
               codeDescriptions.set(displayCode, displayCode);
             } else {
               codeDescriptions.set(displayCode, item.description);
             }
           }
-
-          // Soma valores agrupados para cada data
-          const dateValues = consolidatedByDate.get(data.date)!;
-          const currentValue = dateValues.get(displayCode) || 0;
-          dateValues.set(displayCode, currentValue + item.value);
         });
       });
 
-      // Create JSON rows
+      // Geração do JSON
       uniqueDates.forEach(date => {
         const row: any = { date };
 
-        // Pegar todos os items para esta data
         const dateItems = payrollData
           .filter(data => data.date === date)
           .flatMap(data => JSON.parse(data.codeData as string) as ExtractedPayrollItem[]);
 
-        // Processar cada item mantendo a ordem original
         dateItems.forEach(item => {
           const displayCode = codeToDisplayMap.get(item.code) || item.code;
-
-          // Format value as currency (R$ X.XXX,XX)
           const formattedValue = `R$ ${item.value.toFixed(2).replace('.', ',')}`;
           row[item.description] = formattedValue;
         });
@@ -670,7 +640,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Register all routes with /api prefix
+  // Registra todas as rotas com prefixo /api
   app.use("/api", router);
 
   const httpServer = createServer(app);
