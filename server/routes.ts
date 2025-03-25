@@ -53,35 +53,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const requireAuth = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = req.session.userId;
-
-      // Cria usuário padrão se necessário
       if (!userId) {
-        const defaultUser = await storage.createUser({
-          username: 'default',
-          password: 'default'
-        });
-        req.session.userId = defaultUser.id;
-        req.user = defaultUser;
-        return next();
+        return res.status(401).json({ message: "Unauthorized - Please login" });
       }
 
-      // Verifica se o usuário existe
       const user = await storage.getUser(userId);
-      if (!user) {
-        const defaultUser = await storage.createUser({
-          username: 'default',
-          password: 'default'
-        });
-        req.session.userId = defaultUser.id;
-        req.user = defaultUser;
-        return next();
+      if (!user || user.username !== 'dlinhares') {
+        return res.status(401).json({ message: "Unauthorized - Invalid user" });
       }
 
       req.user = user;
       next();
     } catch (error) {
       console.error('Auth middleware error:', error);
-      next();
+      res.status(401).json({ message: "Authentication error" });
     }
   };
 
