@@ -1,23 +1,24 @@
-//import { ExtractedPayrollItem, ProcessedPayslip } from '@shared/schema';
-//import * as pdfjsLib from 'pdfjs-dist';
 import { ExtractedPayrollItem, ProcessedPayslip } from '@shared/schema';
 import pdfjsLib from 'pdfjs-dist/legacy/build/pdf';
 import 'pdfjs-dist/legacy/build/pdf.worker.entry';
 
+// Define os tipos de fontes possíveis do PDF
 export type PDFSource = 'ERP' | 'RH';
 
+// Interface representando uma página extraída do PDF
 interface PDFPage {
   text: string;
   pageNumber: number;
 }
 
+// Função assíncrona para extrair texto de um PDF
 export async function extractTextFromPDF(pdfBuffer: Buffer): Promise<PDFPage[]> {
   console.log("Iniciando extração do PDF...");
 
   try {
     const pdf = await pdfjsLib.getDocument({ data: pdfBuffer }).promise;
     const pages: PDFPage[] = [];
-
+    // Itera sobre cada página do PDF
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
@@ -42,6 +43,7 @@ export async function extractTextFromPDF(pdfBuffer: Buffer): Promise<PDFPage[]> 
   }
 }
 
+// Função para extrair a data no formato esperado a partir de um texto ERP
 function extractERPDate(text: string): string | null {
   const patterns = [
     /(?:Compet[êe]ncia|Per[íi]odo|Data[^:]*?):\s*(\d{2})[\/\s-](\d{4})/i,
@@ -57,6 +59,7 @@ function extractERPDate(text: string): string | null {
   return null;
 }
 
+// Função para extrair a data de um texto RH baseado em nomes de meses
 function extractRHDate(text: string): string | null {
   const monthMap: { [key: string]: string } = {
     'janeiro': '01', 'fevereiro': '02', 'março': '03', 'marco': '03',
@@ -76,6 +79,7 @@ function extractRHDate(text: string): string | null {
   return null;
 }
 
+// Função para extrair itens de folha de pagamento de textos ERP
 function extractERPItems(text: string, codes: string[]): ExtractedPayrollItem[] {
   const items: ExtractedPayrollItem[] = [];
   const lines = text.split(/[\n\r]+/);
