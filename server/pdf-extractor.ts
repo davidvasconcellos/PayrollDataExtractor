@@ -64,38 +64,73 @@ function extractERPDate(text: string): string | null {
 }
 
 // Função para extrair itens de folha de pagamento de textos ERP
+// function extractERPItems(text: string, codes: string[]): ExtractedPayrollItem[] {
+//   const items: ExtractedPayrollItem[] = [];
+//   const lines = text.split(/[\n\r]+/);
+
+//   for (const code of codes) {
+//     for (const line of lines) {
+//       // Padrão para encontrar códigos e valores
+//       const pattern = new RegExp(`\\b${code}\\b\\s*[-.]?\\s*([^\\n\\r]*?)\\s+R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
+//       const match = line.match(pattern);
+
+//       if (match) {
+//         const description = match[1].trim();
+//         // Converte valor para formato numérico
+//         const valueStr = match[2].replace(/\./g, '').replace(',', '.');
+//         const value = parseFloat(valueStr);
+
+//         console.log(`Extraindo código ${code}: valor original="${match[2]}", convertido="${valueStr}", final=${value}`);
+
+//         if (!isNaN(value) && description) {
+//           const existingItem = items.find(item => item.code === code);
+//           if (existingItem) {
+//             existingItem.value += value;
+//           } else {
+//             items.push({ code, description, value });
+//           }
+//         }
+//       }
+//     }
+//   }
+
+//   return items;
+// }
+
 function extractERPItems(text: string, codes: string[]): ExtractedPayrollItem[] {
-  const items: ExtractedPayrollItem[] = [];
-  const lines = text.split(/[\n\r]+/);
+  const itemsMap = new Map<string, { value: number, description: string, code: string }>();
 
   for (const code of codes) {
-    for (const line of lines) {
-      // Padrão para encontrar códigos e valores
-      const pattern = new RegExp(`\\b${code}\\b\\s*[-.]?\\s*([^\\n\\r]*?)\\s+R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
-      const match = line.match(pattern);
+    // Cria uma regex com a flag global para capturar todas as ocorrências
+    const pattern = new RegExp(`\\b${code}\\b\\s*[-.]?\\s*([^\\n\\r]*?)\\s+R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'gi');
+    
+    // matchAll retorna todas as correspondências
+    const matches = text.matchAll(pattern);
+    
+    for (const match of matches) {
+      const description = match[1].trim();
+      // Converte o valor removendo pontos e trocando vírgula por ponto
+      const valueStr = match[2].replace(/\./g, '').replace(',', '.');
+      const value = parseFloat(valueStr);
 
-      if (match) {
-        const description = match[1].trim();
-        // Converte valor para formato numérico
-        const valueStr = match[2].replace(/\./g, '').replace(',', '.');
-        const value = parseFloat(valueStr);
+      if (!isNaN(value) && description) {
+        // Chave composta por código e descrição para garantir a soma correta
+        const key = `${code}-${description}`;
 
-        console.log(`Extraindo código ${code}: valor original="${match[2]}", convertido="${valueStr}", final=${value}`);
-
-        if (!isNaN(value) && description) {
-          const existingItem = items.find(item => item.code === code);
-          if (existingItem) {
-            existingItem.value += value;
-          } else {
-            items.push({ code, description, value });
-          }
+        if (itemsMap.has(key)) {
+          const existingItem = itemsMap.get(key)!;
+          existingItem.value = parseFloat((existingItem.value + value).toFixed(2));
+        } else {
+          itemsMap.set(key, { code, description, value });
         }
+        console.log(`Código ${code}: "${description}" acumulado para R$ ${itemsMap.get(key)!.value}`);
       }
     }
   }
 
-  return items;
+  return Array.from(itemsMap.values());
 }
+
 
 // Função auxiliar para extrair data baseada na fonte do PDF
 export function extractDate(text: string, source: PDFSource): string | null {
