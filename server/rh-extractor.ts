@@ -76,39 +76,72 @@ export function extractDate(text: string): string | null {
 }
 
 // Função que extrai itens de folha de pagamento do texto
-export function extractPayrollItems(text: string, codes: string[]): ExtractedPayrollItem[] {
-  const items: ExtractedPayrollItem[] = [];
-  const lines = text.split(/[\n\r]+/);
+// export function extractPayrollItems(text: string, codes: string[]): ExtractedPayrollItem[] {
+//   const items: ExtractedPayrollItem[] = [];
+//   const lines = text.split(/[\n\r]+/);
 
-  // Processa cada código fornecido
-  for (const code of codes) {
-    const matches = [];
-    let count = 0;
+//   // Processa cada código fornecido
+//   for (const code of codes) {
+//     const matches = [];
+//     let count = 0;
     
-    // Analisa cada linha do texto
-    for (const line of lines) {
-      // Padrão para encontrar informações do item de folha de pagamento
-      const pattern = new RegExp(`(?:.*?\\s)?\\b${code}\\b[\\s.]*([^\\n\\r]+?)\\s+(?:\\d+(?:\\.\\d{2})?\\s+)?(\\d{2}\\.\\d{4})?\\s*R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
-      const match = line.match(pattern);
+//     // Analisa cada linha do texto
+//     for (const line of lines) {
+//       // Padrão para encontrar informações do item de folha de pagamento
+//       const pattern = new RegExp(`(?:.*?\\s)?\\b${code}\\b[\\s.]*([^\\n\\r]+?)\\s+(?:\\d+(?:\\.\\d{2})?\\s+)?(\\d{2}\\.\\d{4})?\\s*R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'i');
+//       const match = line.match(pattern);
 
-      if (match) {
-        const description = match[1].trim();
-        const month = match[2] || '';
-        const valueStr = match[3].replace(/\./g, '').replace(',', '.');
-        const value = parseFloat(valueStr);
+//       if (match) {
+//         const description = match[1].trim();
+//         const month = match[2] || '';
+//         const valueStr = match[3].replace(/\./g, '').replace(',', '.');
+//         const value = parseFloat(valueStr);
 
-        console.log(`RH - Extraindo código ${code}: valor original="${match[3]}", convertido="${valueStr}", final=${value}, mês=${month}`);
+//         console.log(`RH - Extraindo código ${code}: valor original="${match[3]}", convertido="${valueStr}", final=${value}, mês=${month}`);
 
-        if (!isNaN(value) && description) {
-          count++;
-          const descriptionWithCount = count > 1 ? `${description}(${count})` : description;
-          items.push({ code, description: descriptionWithCount, value });
+//         if (!isNaN(value) && description) {
+//           count++;
+//           const descriptionWithCount = count > 1 ? `${description}(${count})` : description;
+//           items.push({ code, description: descriptionWithCount, value });
+//         }
+//       }
+//     }
+//   }
+
+//   return items;
+// }
+
+export function extractPayrollItems(text: string, codes: string[]): ExtractedPayrollItem[] {
+  const itemsMap = new Map<string, ExtractedPayrollItem>();
+
+  for (const code of codes) {
+    // Cria uma regex global para encontrar todas as ocorrências
+    const pattern = new RegExp(
+      `(?:.*?\\s)?\\b${code}\\b[\\s.]*([^\\n\\r]+?)\\s+(?:\\d+(?:\\.\\d{2})?\\s+)?(\\d{2}\\.\\d{4})?\\s*R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`,
+      'gi'
+    );
+
+    // Itera sobre todas as correspondências encontradas no texto
+    const matches = text.matchAll(pattern);
+    for (const match of matches) {
+      const description = match[1].trim();
+      const valueStr = match[3].replace(/\./g, '').replace(',', '.');
+      const value = parseFloat(valueStr);
+
+      console.log(`RH - Extraindo código ${code}: valor original="${match[3]}", convertido="${valueStr}", final=${value}`);
+      if (!isNaN(value) && description) {
+        const key = `${code}-${description}`;
+        if (itemsMap.has(key)) {
+          const existingItem = itemsMap.get(key)!;
+          existingItem.value = parseFloat((existingItem.value + value).toFixed(2));
+        } else {
+          itemsMap.set(key, { code, description, value });
         }
       }
     }
   }
 
-  return items;
+  return Array.from(itemsMap.values());
 }
 
 // Função principal que processa o PDF completo
