@@ -10,6 +10,14 @@ import { z } from "zod";
 import session from 'express-session';
 import createMemoryStore from 'memorystore';
 
+// Importa as definições de verbas e modelos
+import {
+  predefinedCodes,
+  predefinedModels,
+  getCodeByNumber,
+  getModelByName
+} from './payroll-definitions';
+
 // Configuração do multer para upload de arquivos
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -75,24 +83,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const { username, password } = req.body;
 
     if (!username || !password) {
-      return res.status(400).json({ 
-        message: "Username and password are required" 
+      return res.status(400).json({
+        message: "Username and password are required"
       });
     }
 
     const user = await storage.getUserByUsername(username);
 
     if (!user || user.password !== password) {
-      return res.status(401).json({ 
-        message: "Invalid credentials" 
+      return res.status(401).json({
+        message: "Invalid credentials"
       });
     }
 
     req.session.userId = user.id;
 
-    return res.status(200).json({ 
-      id: user.id, 
-      username: user.username 
+    return res.status(200).json({
+      id: user.id,
+      username: user.username
     });
   });
 
@@ -112,9 +120,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    return res.status(200).json({ 
-      id: req.user.id, 
-      username: req.user.username 
+    return res.status(200).json({
+      id: req.user.id,
+      username: req.user.username
     });
   });
 
@@ -128,7 +136,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.status(200).json(templates);
   });
 
-  // Criar novo template
+  // Modifica a rota de criação de template para suportar modelos pré-definidos
   router.post("/templates", requireAuth, async (req: Request, res: Response) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -136,16 +144,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     const templateSchema = z.object({
       name: z.string().min(1),
-      codes: z.string().min(1)
+      codes: z.string().min(1),
+      modelName: z.string().optional() // Nome do modelo pré-definido (opcional)
     });
 
     try {
-      const { name, codes } = templateSchema.parse(req.body);
+      const { name, codes, modelName } = templateSchema.parse(req.body);
+
+      // Se um modelo foi especificado, usa seus códigos
+      let finalCodes = codes;
+      if (modelName) {
+        const model = getModelByName(modelName);
+        if (model) {
+          finalCodes = model.codes.join(',');
+        }
+      }
 
       const template = await storage.createTemplate({
         userId: req.user.id,
         name,
-        codes
+        codes: finalCodes
       });
 
       res.status(201).json(template);
@@ -328,7 +346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       console.log('Processando PDF com códigos:', codesList);
-      const results = source === 'ERP' 
+      const results = source === 'ERP'
         ? await processERPPDF(req.file.buffer, codesList, source as PDFSource)
         : await processRHPDF(req.file.buffer, codesList);
       console.log('Resultado do processamento (múltiplas páginas):', JSON.stringify(results, null, 2));
@@ -623,6 +641,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error exporting JSON:", error);
       res.status(500).json({ message: "Failed to export data as JSON" });
     }
+  });
+
+
+  // Adiciona novas rotas para verbas e modelos pré-definidos
+  router.get("/predefined-codes", requireAuth, (req: Request, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    res.status(200).json(predefinedCodes);
+  });
+
+  router.get("/predefined-models", requireAuth, (req: Request, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    res.status(200).json(predefinedModels);
+  });
+
+  router.get("/predefined-codes/:code", requireAuth, (req: Request, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const code = getCodeByNumber(req.params.code);
+    if (!code) {
+      return res.status(404).json({ message: "Code not found" });
+    }
+    res.status(200).json(code);
+  });
+
+  router.get("/predefined-models/:name", requireAuth, (req: Request, res: Response) => {
+    if (!req.user) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const model = getModelByName(req.params.name);
+    if (!model) {
+      return res.status(404).json({ message: "Model not found" });
+    }
+    res.status(200).json(model);
   });
 
   // Registra todas as rotas com prefixo /api
