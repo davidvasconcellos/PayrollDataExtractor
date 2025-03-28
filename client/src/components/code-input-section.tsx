@@ -30,12 +30,28 @@ interface CodeInputSectionProps {
   onTemplateSelect: (template: TemplateType) => void;
 }
 
+interface CodeViewState {
+  selectedCodes: string[];
+  viewMode: 'card' | 'list';
+  searchTerm: string;
+  selectedModel: string;
+}
+
+import * as React from 'react';
+import { useState } from 'react';
+
 export default function CodeInputSection({
   codes,
   setCodes,
   templates,
   onTemplateSelect
 }: CodeInputSectionProps) {
+  const [state, setState] = useState<CodeViewState>({
+    selectedCodes: codes.split(/[\s,]+/).filter(Boolean),
+    viewMode: 'card',
+    searchTerm: '',
+    selectedModel: ''
+  });
   // Fetch pre-defined codes and models
   const { data: predefinedCodes } = useQuery<PayrollCode[]>({
     queryKey: ['/api/predefined-codes'],
@@ -60,21 +76,71 @@ export default function CodeInputSection({
   };
 
   const handleCodeSelect = (code: string) => {
-    const currentCodes = codes.split(/[\s,]+/).filter(Boolean);
-    if (!currentCodes.includes(code)) {
-      const newCodes = [...currentCodes, code].join(', ');
-      setCodes(newCodes);
-    }
+    setState(prev => {
+      const newSelectedCodes = prev.selectedCodes.includes(code)
+        ? prev.selectedCodes.filter(c => c !== code)
+        : [...prev.selectedCodes, code];
+      
+      setCodes(newSelectedCodes.join(', '));
+      return { ...prev, selectedCodes: newSelectedCodes };
+    });
   };
 
   return (
     <section className="mb-8">
       <Card>
         <CardHeader>
-          <CardTitle>Códigos das Verbas</CardTitle>
-          <CardDescription>
-            Selecione verbas pré-definidas, um modelo de cargo ou digite manualmente os códigos.
-          </CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle>Códigos das Verbas</CardTitle>
+              <CardDescription>
+                Selecione verbas pré-definidas, um modelo de cargo ou digite manualmente os códigos.
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-500">Lista</span>
+              <button
+                onClick={() => setState(prev => ({ ...prev, viewMode: prev.viewMode === 'card' ? 'list' : 'card' }))}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                  state.viewMode === 'card' ? 'bg-primary' : 'bg-gray-200'
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    state.viewMode === 'card' ? 'translate-x-6' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+              <span className="text-sm text-gray-500">Cards</span>
+            </div>
+          </div>
+          <div className="mt-4">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Pesquisar funções..."
+                className="flex-1 rounded-md border px-3 py-2 text-sm"
+                value={state.searchTerm}
+                onChange={(e) => setState(prev => ({ ...prev, searchTerm: e.target.value }))}
+              />
+              <select
+                value={state.selectedModel}
+                onChange={(e) => {
+                  const modelName = e.target.value;
+                  setState(prev => ({ ...prev, selectedModel: modelName }));
+                  if (modelName) handleModelSelect(modelName);
+                }}
+                className="rounded-md border px-3 py-2 text-sm"
+              >
+                <option value="">Selecione uma função</option>
+                {predefinedModels?.map(model => (
+                  <option key={model.name} value={model.name}>
+                    {model.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="predefined">
@@ -90,21 +156,59 @@ export default function CodeInputSection({
                 {['PROVENTOS', 'DESCONTOS', 'OUTROS'].map((category) => (
                   <div key={category}>
                     <h3 className="text-sm font-medium mb-2">{category}</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                      {predefinedCodes
-                        ?.filter(code => code.category === category)
-                        .map(code => (
-                          <button
-                            key={code.code}
-                            onClick={() => handleCodeSelect(code.code)}
-                            className="text-left px-3 py-2 text-sm rounded-md border hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                          >
-                            <span className="font-mono text-xs text-gray-500">{code.code}</span>
-                            <br />
-                            {code.description}
-                          </button>
-                        ))}
-                    </div>
+                    {state.viewMode === 'card' ? (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {predefinedCodes
+                          ?.filter(code => {
+                            const matchesSearch = !state.searchTerm || 
+                              code.description.toLowerCase().includes(state.searchTerm.toLowerCase());
+                            const matchesCategory = code.category === category;
+                            return matchesSearch && matchesCategory;
+                          })
+                          .map(code => (
+                            <button
+                              key={code.code}
+                              onClick={() => handleCodeSelect(code.code)}
+                              className={`text-left px-3 py-2 text-sm rounded-md border hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all ${
+                                state.selectedCodes.includes(code.code) ? 'border-blue-500 ring-2 ring-blue-500' : ''
+                              }`}
+                            >
+                              <span className="font-mono text-xs text-gray-500">{code.code}</span>
+                              <br />
+                              {code.description}
+                            </button>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {predefinedCodes
+                          ?.filter(code => {
+                            const matchesSearch = !state.searchTerm || 
+                              code.description.toLowerCase().includes(state.searchTerm.toLowerCase());
+                            const matchesCategory = code.category === category;
+                            return matchesSearch && matchesCategory;
+                          })
+                          .map(code => (
+                            <div
+                              key={code.code}
+                              className={`flex items-center justify-between p-2 rounded-md border hover:bg-gray-50 transition-all ${
+                                state.selectedCodes.includes(code.code) ? 'border-blue-500 ring-2 ring-blue-500' : ''
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-xs text-gray-500">{code.code}</span>
+                                <span>{code.description}</span>
+                              </div>
+                              <button
+                                onClick={() => handleCodeSelect(code.code)}
+                                className="px-3 py-1 text-sm rounded-md bg-gray-100 hover:bg-gray-200"
+                              >
+                                {state.selectedCodes.includes(code.code) ? 'Remover' : 'Adicionar'}
+                              </button>
+                            </div>
+                          ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
