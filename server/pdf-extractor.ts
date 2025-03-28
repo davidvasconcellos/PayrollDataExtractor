@@ -102,7 +102,8 @@ function extractERPItems(text: string, codes: string[]): ExtractedPayrollItem[] 
 
   for (const code of codes) {
     // Cria uma regex com a flag global para capturar todas as ocorrências
-    const pattern = new RegExp(`\\b${code}\\b\\s*[-.]?\\s*([^\\n\\r]*?)\\s+R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'gi');
+    // const pattern = new RegExp(`\\b${code}\\b\\s*[-.]?\\s*([^\\n\\r]*?)\\s+R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'gi');
+    const pattern = new RegExp(`(?<=\\s|^)${code}(?=\\s|[-.:])\\s*[-.]?\\s*([^\\n\\r]*?)\\s+R?\\$?\\s*(\\d+(?:[.,]\\d{3})*(?:[.,]\\d{2}))`, 'gi');
     
     // matchAll retorna todas as correspondências
     const matches = text.matchAll(pattern);
