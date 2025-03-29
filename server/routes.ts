@@ -395,10 +395,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Mapeamento de códigos para exibição
       const codeToDisplayMap = new Map<string, string>();
+      
+      // Primeiro, mapear códigos predefinidos
+      predefinedCodes.forEach(pc => {
+        const codes = pc.code.split(/[\s,]+/).filter(Boolean);
+        codes.forEach(code => {
+          codeToDisplayMap.set(code.trim(), pc.description);
+        });
+      });
+
+      // Depois, mapear códigos de grupos personalizados
       codeGroups.forEach(group => {
         const codes = group.codes.split(/[\s,]+/).filter(Boolean);
         codes.forEach(code => {
-          codeToDisplayMap.set(code, group.displayName);
+          codeToDisplayMap.set(code.trim(), group.displayName);
         });
       });
 
@@ -414,16 +424,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
         items.forEach(item => {
-          const displayCode = codeToDisplayMap.get(item.code) || item.code;
-          uniqueDisplayCodes.add(displayCode);
-
-          if (item.description) {
-            if (codeToDisplayMap.has(item.code)) {
-              codeDescriptions.set(displayCode, displayCode);
-            } else {
-              codeDescriptions.set(displayCode, item.description);
-            }
-          }
+          const displayName = codeToDisplayMap.get(item.code) || item.code;
+          uniqueDisplayCodes.add(displayName);
+          codeDescriptions.set(displayName, displayName);
         });
       });
 
@@ -442,7 +445,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
             items.forEach(item => {
               const displayCode = codeToDisplayMap.get(item.code) || item.code;
-              result[displayCode] = (result[displayCode] as number) + item.value;
+              if (typeof result[displayCode] === 'number') {
+                result[displayCode] = (result[displayCode] as number) + item.value;
+              } else {
+                result[displayCode] = item.value;
+              }
             });
           });
 

@@ -17,16 +17,20 @@ export interface PayrollCode {
   // Verbas pré-definidas
   export const predefinedCodes: PayrollCode[] = [
     // Proventos
-    { code: '001', description: 'Salário Base', category: 'PROVENTOS' },
-    { code: '002', description: 'Adicional por Tempo de Serviço', category: 'PROVENTOS' },
-    { code: '003', description: 'Gratificação de Função', category: 'PROVENTOS' },
-    { code: '004', description: 'Hora Extra 50%', category: 'PROVENTOS' },
-    { code: '005', description: 'Hora Extra 100%', category: 'PROVENTOS' },
-    { code: '006', description: 'Adicional Noturno', category: 'PROVENTOS' },
-    { code: '007', description: 'Adicional de Insalubridade', category: 'PROVENTOS' },
-    { code: '008', description: 'Adicional de Periculosidade', category: 'PROVENTOS' },
-    { code: '009', description: '13º Salário', category: 'PROVENTOS' },
-    { code: '010', description: 'Férias', category: 'PROVENTOS' },
+    { code: '0002, 00002', description: 'VENCIMENTO', category: 'PROVENTOS' },
+    { code: '0146, 00146, 2033', description: 'Adicional por Tempo de Serviço', category: 'PROVENTOS' },
+    { code: '0160, 00160, 0037', description: '(GCG) Grat Exec Ativ Ciclo Gest', category: 'PROVENTOS' },
+    { code: '0153, 00153, 1116, 00423, 0423, 1084', description: 'CET', category: 'PROVENTOS' },
+    { code: '0527, 00527, MZ02, 331', description: '1/3 FERIAS', category: 'PROVENTOS' },
+    { code: '0544, 00544', description: '13 SALARIO', category: 'PROVENTOS' },
+    { code: '00537, 0537, 0400, 332,', description: 'ADIANT 13 SALARIO', category: 'PROVENTOS' },
+    { code: '0703, 00703, 1101', description: 'INSTRUTORIA', category: 'PROVENTOS' },
+    { code: '2023, 2079', description: 'Estabilidade Economica', category: 'PROVENTOS' },
+    { code: '0823, 00823', description: 'Vantagem Pessoal', category: 'PROVENTOS' },
+    { code: '0026, 00026', description: 'D.A.I', category: 'PROVENTOS' },
+    { code: '0025, 00025, 0008', description: 'D.A.S', category: 'PROVENTOS' },
+    { code: '0775, 00775', description: 'DIF SALARIO', category: 'PROVENTOS' },
+    { code: '0120, 00120, 2017', description: 'SUBSTITUICAO', category: 'PROVENTOS' },
   
     // Descontos
     { code: '501', description: 'INSS', category: 'DESCONTOS' },
@@ -35,7 +39,7 @@ export interface PayrollCode {
     { code: '504', description: 'Vale Alimentação', category: 'DESCONTOS' },
     { code: '505', description: 'Plano de Saúde', category: 'DESCONTOS' },
     { code: '506', description: 'Contribuição Sindical', category: 'DESCONTOS' },
-    { code: '507', description: 'Faltas', category: 'DESCONTOS' },
+    { code: '0550', description: 'AD 13 SAL', category: 'DESCONTOS' },
     { code: '508', description: 'Adiantamento Salarial', category: 'DESCONTOS' },
   
     // Outros
@@ -47,9 +51,9 @@ export interface PayrollCode {
   // Modelos (cargos) pré-definidos
   export const predefinedModels: PayrollModel[] = [
     {
-      name: 'Analista Administrativo',
-      description: 'Cargo de analista com foco em atividades administrativas',
-      codes: ['001', '002', '501', '502', '503', '504']
+      name: 'ESPEC POL PUB GESTAO GOVERNAME',
+      description: 'Cargo de Especialista em Políticas Públicas e Gestão Governamental',
+      codes: ['0002', '00002', '0160', '00160', '0037', '0146', '00146', '2033', '0153', '00153', '1116', '00423', '0423', '1084', '0527', '00527', 'MZ02', '331', '0544', '00544', '00537', '0537', '0400', '332', '0703', '00703', '1101', '2023', '2079', '0823', '00823', '0026', '00026', '0025', '00025', '0008', '0775', '00775', '0120', '00120', '2017']
     },
     {
       name: 'Operador de Produção',

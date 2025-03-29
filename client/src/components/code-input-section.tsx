@@ -69,25 +69,38 @@ export default function CodeInputSection({
     }
   };
 
+  const normalizeCode = (code: string): string[] => {
+    return code.split(/[,\s]+/).map(c => c.trim()).filter(Boolean);
+  };
+
   const handleModelSelect = (modelName: string) => {
     const selectedModel = predefinedModels?.find(m => m.name === modelName);
     if (selectedModel && Array.isArray(selectedModel.codes)) {
-      setState(prev => ({ ...prev, selectedCodes: selectedModel.codes }));
-      setCodes(selectedModel.codes.join(', '));
+      const normalizedCodes = selectedModel.codes.flatMap(normalizeCode);
+      setState(prev => ({ ...prev, selectedCodes: normalizedCodes }));
+      setCodes(normalizedCodes.join(', '));
     }
   };
 
+  const isCodeSelected = (code: string): boolean => {
+    const normalizedInputCodes = normalizeCode(code);
+    return normalizedInputCodes.some(c => state.selectedCodes.includes(c));
+  };
+
   const handleCodeSelect = (code: string) => {
+    const normalizedInputCodes = normalizeCode(code);
     setState(prev => {
-      if (prev.selectedCodes.includes(code)) {
+      const isSelected = normalizedInputCodes.some(c => prev.selectedCodes.includes(c));
+      
+      if (isSelected) {
         if (confirm("Deseja remover esta verba da função?")) {
-          const newSelectedCodes = prev.selectedCodes.filter(c => c !== code);
+          const newSelectedCodes = prev.selectedCodes.filter(c => !normalizedInputCodes.includes(c));
           setCodes(newSelectedCodes.join(', '));
           return { ...prev, selectedCodes: newSelectedCodes };
         }
         return prev;
       } else {
-        const newSelectedCodes = [...prev.selectedCodes, code];
+        const newSelectedCodes = [...prev.selectedCodes, ...normalizedInputCodes];
         setCodes(newSelectedCodes.join(', '));
         return { ...prev, selectedCodes: newSelectedCodes };
       }
@@ -133,7 +146,7 @@ export default function CodeInputSection({
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="Pesquisar verbas..."
+                placeholder="Pesquisar funções..."
                 className="flex-1 rounded-md border px-3 py-2 text-sm"
                 value={state.searchTerm}
                 onChange={(e) => setState(prev => ({ ...prev, searchTerm: e.target.value }))}
@@ -185,7 +198,7 @@ export default function CodeInputSection({
                               key={code.code}
                               onClick={() => handleCodeSelect(code.code)}
                               className={`text-left px-3 py-2 text-sm rounded-md border hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all ${
-                                state.selectedCodes.includes(code.code) ? 'border-blue-500 ring-2 ring-blue-500' : ''
+                                isCodeSelected(code.code) ? 'border-blue-500 ring-2 ring-blue-500' : ''
                               }`}
                             >
                               <span className="font-mono text-xs text-gray-500">{code.code}</span>
