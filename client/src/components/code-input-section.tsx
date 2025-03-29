@@ -7,6 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import * as React from 'react';
 import { useState } from 'react';
+import { ChevronDown, ChevronUp, List, LayoutGrid } from 'lucide-react';
+
 
 interface TemplateType {
   id: number;
@@ -38,6 +40,7 @@ interface CodeViewState {
   viewMode: 'card' | 'list';
   searchTerm: string;
   selectedModel: string;
+  isCollapsed: {[key:string]:boolean};
 }
 
 
@@ -51,7 +54,8 @@ export default function CodeInputSection({
     selectedCodes: codes.split(/[\s,]+/).filter(Boolean),
     viewMode: 'card',
     searchTerm: '',
-    selectedModel: ''
+    selectedModel: '',
+    isCollapsed: {'PROVENTOS': true, 'DESCONTOS': true, 'OUTROS': true}
   });
   // Fetch pre-defined codes and models
   const { data: predefinedCodes } = useQuery<PayrollCode[]>({
@@ -88,19 +92,26 @@ export default function CodeInputSection({
   };
 
   const handleCodeSelect = (code: string) => {
-    const normalizedInputCodes = normalizeCode(code);
+    const codeGroup = predefinedCodes?.find(pc => 
+      normalizeCode(pc.code).some(c => normalizeCode(code).includes(c))
+    );
+
+    if (!codeGroup) return;
+
+    const groupCodes = normalizeCode(codeGroup.code);
+
     setState(prev => {
-      const isSelected = normalizedInputCodes.some(c => prev.selectedCodes.includes(c));
-      
+      const isSelected = groupCodes.some(c => prev.selectedCodes.includes(c));
+
       if (isSelected) {
         if (confirm("Deseja remover esta verba da função?")) {
-          const newSelectedCodes = prev.selectedCodes.filter(c => !normalizedInputCodes.includes(c));
+          const newSelectedCodes = prev.selectedCodes.filter(c => !groupCodes.includes(c));
           setCodes(newSelectedCodes.join(', '));
           return { ...prev, selectedCodes: newSelectedCodes };
         }
         return prev;
       } else {
-        const newSelectedCodes = [...prev.selectedCodes, ...normalizedInputCodes];
+        const newSelectedCodes = [...prev.selectedCodes, ...groupCodes];
         setCodes(newSelectedCodes.join(', '));
         return { ...prev, selectedCodes: newSelectedCodes };
       }
@@ -114,6 +125,10 @@ export default function CodeInputSection({
     }
   };
 
+  const handleCollapse = (category: string) => {
+    setState(prev => ({...prev, isCollapsed: {...prev.isCollapsed, [category]: !prev.isCollapsed[category]}}))
+  }
+
   return (
     <section className="mb-8">
       <Card>
@@ -126,20 +141,14 @@ export default function CodeInputSection({
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-500">Lista</span>
               <button
                 onClick={() => setState(prev => ({ ...prev, viewMode: prev.viewMode === 'card' ? 'list' : 'card' }))}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
                   state.viewMode === 'card' ? 'bg-primary' : 'bg-gray-200'
                 }`}
               >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    state.viewMode === 'card' ? 'translate-x-6' : 'translate-x-1'
-                  }`}
-                />
+                {state.viewMode === 'card' ? <LayoutGrid className="h-5 w-5 text-white"/> : <List className="h-5 w-5 text-gray-700"/>}
               </button>
-              <span className="text-sm text-gray-500">Cards</span>
             </div>
           </div>
           <div className="mt-4">
@@ -182,60 +191,67 @@ export default function CodeInputSection({
             <TabsContent value="predefined">
               <div className="space-y-4">
                 {['PROVENTOS', 'DESCONTOS', 'OUTROS'].map((category) => (
-                  <div key={category}>
-                    <h3 className="text-sm font-medium mb-2">{category}</h3>
-                    {state.viewMode === 'card' ? (
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {predefinedCodes
-                          ?.filter(code => {
-                            const matchesSearch = !state.searchTerm || 
-                              code.description.toLowerCase().includes(state.searchTerm.toLowerCase());
-                            const matchesCategory = code.category === category;
-                            return matchesSearch && matchesCategory;
-                          })
-                          .map(code => (
-                            <button
-                              key={code.code}
-                              onClick={() => handleCodeSelect(code.code)}
-                              className={`text-left px-3 py-2 text-sm rounded-md border hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all ${
-                                isCodeSelected(code.code) ? 'border-blue-500 ring-2 ring-blue-500' : ''
-                              }`}
-                            >
-                              <span className="font-mono text-xs text-gray-500">{code.code}</span>
-                              <br />
-                              {code.description}
-                            </button>
-                          ))}
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {predefinedCodes
-                          ?.filter(code => {
-                            const matchesSearch = !state.searchTerm || 
-                              code.description.toLowerCase().includes(state.searchTerm.toLowerCase());
-                            const matchesCategory = code.category === category;
-                            return matchesSearch && matchesCategory;
-                          })
-                          .map(code => (
-                            <div
-                              key={code.code}
-                              className={`flex items-center justify-between p-2 rounded-md border hover:bg-gray-50 transition-all ${
-                                state.selectedCodes.includes(code.code) ? 'border-blue-500 ring-2 ring-blue-500' : ''
-                              }`}
-                            >
-                              <div className="flex items-center gap-2">
-                                <span className="font-mono text-xs text-gray-500">{code.code}</span>
-                                <span>{code.description}</span>
-                              </div>
+                  <div key={category} className="border rounded-md p-2">
+                    <div className="flex justify-between items-center cursor-pointer" onClick={() => handleCollapse(category)}>
+                      <h3 className="text-sm font-medium mb-2">{category}</h3>
+                      {state.isCollapsed[category] ? <ChevronDown className="h-5 w-5"/> : <ChevronUp className="h-5 w-5"/>}
+                    </div>
+                    { !state.isCollapsed[category] && (
+                    <div className="space-y-4">
+                      {state.viewMode === 'card' ? (
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                          {predefinedCodes
+                            ?.filter(code => {
+                              const matchesSearch = !state.searchTerm || 
+                                code.description.toLowerCase().includes(state.searchTerm.toLowerCase());
+                              const matchesCategory = code.category === category;
+                              return matchesSearch && matchesCategory;
+                            })
+                            .map(code => (
                               <button
+                                key={code.code}
                                 onClick={() => handleCodeSelect(code.code)}
-                                className="px-3 py-1 text-sm rounded-md bg-gray-100 hover:bg-gray-200"
+                                className={`text-left px-3 py-2 text-sm rounded-md border hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary transition-all ${
+                                  isCodeSelected(code.code) ? 'border-blue-500 ring-2 ring-blue-500' : ''
+                                }`}
                               >
-                                {state.selectedCodes.includes(code.code) ? 'Remover' : 'Adicionar'}
+                                <span className="font-mono text-xs text-gray-500">{code.code}</span>
+                                <br />
+                                {code.description}
                               </button>
-                            </div>
-                          ))}
-                      </div>
+                            ))}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {predefinedCodes
+                            ?.filter(code => {
+                              const matchesSearch = !state.searchTerm || 
+                                code.description.toLowerCase().includes(state.searchTerm.toLowerCase());
+                              const matchesCategory = code.category === category;
+                              return matchesSearch && matchesCategory;
+                            })
+                            .map(code => (
+                              <div
+                                key={code.code}
+                                className={`flex items-center justify-between p-2 rounded-md border hover:bg-gray-50 transition-all ${
+                                  state.selectedCodes.includes(code.code) ? 'border-blue-500 ring-2 ring-blue-500' : ''
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-xs text-gray-500">{code.code}</span>
+                                  <span>{code.description}</span>
+                                </div>
+                                <button
+                                  onClick={() => handleCodeSelect(code.code)}
+                                  className="px-3 py-1 text-sm rounded-md bg-gray-100 hover:bg-gray-200"
+                                >
+                                  {state.selectedCodes.includes(code.code) ? 'Remover' : 'Adicionar'}
+                                </button>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
                     )}
                   </div>
                 ))}
