@@ -1,9 +1,12 @@
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import * as React from 'react';
+import { useState } from 'react';
 
 interface TemplateType {
   id: number;
@@ -37,8 +40,6 @@ interface CodeViewState {
   selectedModel: string;
 }
 
-import * as React from 'react';
-import { useState } from 'react';
 
 export default function CodeInputSection({
   codes,
@@ -70,20 +71,34 @@ export default function CodeInputSection({
 
   const handleModelSelect = (modelName: string) => {
     const selectedModel = predefinedModels?.find(m => m.name === modelName);
-    if (selectedModel) {
+    if (selectedModel && Array.isArray(selectedModel.codes)) {
+      setState(prev => ({ ...prev, selectedCodes: selectedModel.codes }));
       setCodes(selectedModel.codes.join(', '));
     }
   };
 
   const handleCodeSelect = (code: string) => {
     setState(prev => {
-      const newSelectedCodes = prev.selectedCodes.includes(code)
-        ? prev.selectedCodes.filter(c => c !== code)
-        : [...prev.selectedCodes, code];
-      
-      setCodes(newSelectedCodes.join(', '));
-      return { ...prev, selectedCodes: newSelectedCodes };
+      if (prev.selectedCodes.includes(code)) {
+        if (confirm("Deseja remover esta verba da função?")) {
+          const newSelectedCodes = prev.selectedCodes.filter(c => c !== code);
+          setCodes(newSelectedCodes.join(', '));
+          return { ...prev, selectedCodes: newSelectedCodes };
+        }
+        return prev;
+      } else {
+        const newSelectedCodes = [...prev.selectedCodes, code];
+        setCodes(newSelectedCodes.join(', '));
+        return { ...prev, selectedCodes: newSelectedCodes };
+      }
     });
+  };
+
+  const handleClearCodes = () => {
+    if (confirm("Deseja limpar todas as verbas selecionadas?")) {
+      setState(prev => ({ ...prev, selectedCodes: [] }));
+      setCodes("");
+    }
   };
 
   return (
@@ -118,7 +133,7 @@ export default function CodeInputSection({
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="Pesquisar funções..."
+                placeholder="Pesquisar verbas..."
                 className="flex-1 rounded-md border px-3 py-2 text-sm"
                 value={state.searchTerm}
                 onChange={(e) => setState(prev => ({ ...prev, searchTerm: e.target.value }))}
@@ -273,7 +288,17 @@ export default function CodeInputSection({
           </Tabs>
 
           <div className="mt-4">
-            <Label>Códigos Selecionados</Label>
+            <div className="flex justify-between items-center">
+              <Label>Códigos Selecionados</Label>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleClearCodes}
+                className="text-sm"
+              >
+                Limpar Seleção
+              </Button>
+            </div>
             <div className="mt-2 p-3 bg-gray-50 rounded-md">
               <p className="font-mono text-sm">
                 {codes || <span className="text-gray-400">Nenhum código selecionado</span>}
