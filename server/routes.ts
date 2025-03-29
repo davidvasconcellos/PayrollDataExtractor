@@ -1,6 +1,7 @@
 
 import express, { type Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
+import XLSX from 'xlsx';
 import { storage } from "./storage";
 import multer from "multer";
 import { processPDF as processERPPDF, PDFSource } from "./pdf-extractor";
@@ -492,7 +493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Rota para exportar CSV
+  // Rota para exportar XLSX
   router.get("/export/csv", requireAuth, async (req: Request, res: Response) => {
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -513,21 +514,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Preparação dos dados para CSV
       const uniqueDates = new Set<string>();
-      const uniqueDisplayCodes = new Set<string>();
+      const advantagesCodes = new Set<string>();
+      const discountsCodes = new Set<string>();
       const codeDescriptions = new Map<string, string>();
-      const consolidatedByDate = new Map<string, Map<string, number>>();
+      const consolidatedByDate = new Map<string, { advantages: Map<string, number>, discounts: Map<string, number> }>();
 
       payrollData.forEach(data => {
         uniqueDates.add(data.date);
 
         if (!consolidatedByDate.has(data.date)) {
-          consolidatedByDate.set(data.date, new Map<string, number>());
+          consolidatedByDate.set(data.date, {
+            advantages: new Map<string, number>(),
+            discounts: new Map<string, number>()
+          });
         }
 
         const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
         items.forEach(item => {
           const displayCode = codeToDisplayMap.get(item.code) || item.code;
-          uniqueDisplayCodes.add(displayCode);
+          const isDiscount = predefinedCodes.find(pc => 
+            pc.code.split(/[\s,]+/).some(c => c.trim() === item.code) && 
+            pc.category === 'DESCONTOS'
+          );
+
+          if (isDiscount) {
+            discountsCodes.add(displayCode);
+          } else {
+            advantagesCodes.add(displayCode);
+          }
 
           if (item.description) {
             if (codeToDisplayMap.has(item.code)) {
@@ -538,38 +552,162 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           const dateValues = consolidatedByDate.get(data.date)!;
-          const currentValue = dateValues.get(displayCode) || 0;
-          dateValues.set(displayCode, currentValue + item.value);
+          const targetMap = isDiscount ? dateValues.discounts : dateValues.advantages;
+          const currentValue = targetMap.get(displayCode) || 0;
+          targetMap.set(displayCode, currentValue + item.value);
         });
       });
 
-      // Geração do CSV
-      let csv = "DATA";
-      const displayCodesArray = Array.from(uniqueDisplayCodes);
+      // Função de formatação de moeda
+      const formatCurrency = (value: number): string => {
+        return `R$ ${value.toFixed(2).replace('.', ',')}`;
+      };
 
-      displayCodesArray.forEach(displayCode => {
-        const description = codeDescriptions.get(displayCode) || displayCode;
-        csv += `;${description}`;
+      // Organizar códigos por categoria
+      const advantagesArray: string[] = [];
+      const discountsArray: string[] = [];
+      
+      predefinedCodes.forEach(code => {
+        const codes = code.code.split(/[\s,]+/).filter(Boolean);
+        codes.forEach(c => {
+          if (code.category === 'PROVENTOS') {
+            advantagesArray.push(c.trim());
+          } else if (code.category === 'DESCONTOS') {
+            discountsArray.push(c.trim());
+          }
+        });
       });
 
-      csv += "\n";
+      // Preparar dados para planilha de vantagens
+      const advantagesData: any[] = [];
+      
+      // Mapear códigos para suas descrições predefinidas
+      const advantageCodeMap = new Map<string, string>();
+      predefinedCodes.forEach(code => {
+        if (code.category === 'PROVENTOS') {
+          code.code.split(/[,\s]+/).forEach(c => {
+            advantageCodeMap.set(c.trim(), code.description);
+          });
+        }
+      });
 
+      // Criar cabeçalhos únicos baseados nos códigos predefinidos
+      const uniqueAdvantages = Array.from(new Set(
+        advantagesArray.map(code => {
+          return advantageCodeMap.get(code) || code;
+        })
+      ));
+
+      const advantagesHeaders = ['DATA', ...uniqueAdvantages, 'Total Vantagens'];
+      advantagesData.push(advantagesHeaders);
+
+      // Gerar linhas de dados
       uniqueDates.forEach(date => {
-        let row = date;
-        const dateValues = consolidatedByDate.get(date)!;
+        const row = [date];
+        const dateData = payrollData.filter(data => data.date === date);
+        let totalAdvantages = 0;
 
-        displayCodesArray.forEach(displayCode => {
-          const value = dateValues.get(displayCode) || 0;
-          const formattedValue = `R$ ${value.toFixed(2).replace('.', ',')}`;
-          row += `;${formattedValue}`;
+        uniqueAdvantages.forEach(description => {
+          let value = 0;
+          dateData.forEach(data => {
+            const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
+            items.forEach(item => {
+              if (advantageCodeMap.get(item.code) === description || 
+                  (!advantageCodeMap.has(item.code) && item.code === description)) {
+                value += item.value;
+                totalAdvantages += item.value;
+              }
+            });
+          });
+          row.push(value);
         });
-
-        csv += row + "\n";
+        row.push(totalAdvantages);
+        advantagesData.push(row);
       });
 
-      res.setHeader("Content-Type", "text/csv");
-      res.setHeader("Content-Disposition", "attachment; filename=contracheques.csv");
-      res.status(200).send(csv);
+      // Preparar dados para planilha de descontos
+      const discountsData: any[] = [];
+      
+      // Mapear códigos para suas descrições predefinidas
+      const discountCodeMap = new Map<string, string>();
+      predefinedCodes.forEach(code => {
+        if (code.category === 'DESCONTOS') {
+          code.code.split(/[,\s]+/).forEach(c => {
+            discountCodeMap.set(c.trim(), code.description);
+          });
+        }
+      });
+
+      // Criar cabeçalhos únicos baseados nos códigos predefinidos
+      const uniqueDiscounts = Array.from(new Set(
+        discountsArray.map(code => {
+          return discountCodeMap.get(code) || code;
+        })
+      ));
+
+      const discountsHeaders = ['DATA', ...uniqueDiscounts, 'Total Descontos'];
+      discountsData.push(discountsHeaders);
+
+      // Gerar linhas de dados
+      uniqueDates.forEach(date => {
+        const row = [date];
+        const dateData = payrollData.filter(data => data.date === date);
+        let totalDiscounts = 0;
+
+        uniqueDiscounts.forEach(description => {
+          let value = 0;
+          dateData.forEach(data => {
+            const items = JSON.parse(data.codeData as string) as ExtractedPayrollItem[];
+            items.forEach(item => {
+              if (discountCodeMap.get(item.code) === description || 
+                  (!discountCodeMap.has(item.code) && item.code === description)) {
+                value += item.value;
+                totalDiscounts += item.value;
+              }
+            });
+          });
+          row.push(value);
+        });
+        row.push(totalDiscounts);
+        discountsData.push(row);
+      });
+
+      // Criar workbook com duas planilhas
+      const wb = XLSX.utils.book_new();
+      
+      const wsVantagens = XLSX.utils.aoa_to_sheet(advantagesData);
+      const wsDescontos = XLSX.utils.aoa_to_sheet(discountsData);
+
+      // Ajustar formato das células para moeda
+      const range = XLSX.utils.decode_range(wsVantagens['!ref']);
+      for(let R = 1; R <= range.e.r; ++R) {
+        for(let C = 1; C <= range.e.c; ++C) {
+          const cell = XLSX.utils.encode_cell({r: R, c: C});
+          if(wsVantagens[cell]) {
+            wsVantagens[cell].z = '#,##0.00';
+          }
+        }
+      }
+
+      const rangeDesc = XLSX.utils.decode_range(wsDescontos['!ref']);
+      for(let R = 1; R <= rangeDesc.e.r; ++R) {
+        for(let C = 1; C <= rangeDesc.e.c; ++C) {
+          const cell = XLSX.utils.encode_cell({r: R, c: C});
+          if(wsDescontos[cell]) {
+            wsDescontos[cell].z = '#,##0.00';
+          }
+        }
+      }
+
+      XLSX.utils.book_append_sheet(wb, wsVantagens, "VANTAGENS");
+      XLSX.utils.book_append_sheet(wb, wsDescontos, "DESCONTOS");
+
+      // Gerar buffer do arquivo XLSX
+      const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+      res.setHeader("Content-Disposition", "attachment; filename=contracheques.xlsx");
+      res.status(200).send(buf);
     } catch (error) {
       console.error("Error exporting CSV:", error);
       res.status(500).json({ message: "Failed to export data as CSV" });
