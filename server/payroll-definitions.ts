@@ -35,7 +35,10 @@ export interface PayrollCode {
     { code: '0658, 00658, 7029', description: 'AUX ALIMENT', category: 'PROVENTOS' },
     { code: '0657, 00657', description: 'AUX TRANSPORTE', category: 'PROVENTOS' },
     { code: '0546, 00546, ', description: '13 SAL VAR', category: 'PROVENTOS' },
-
+    { code: '7014', description: 'REEMBOLSO N TRIBU.', category: 'PROVENTOS' },
+    { code: '6008', description: 'RESTITUICAO', category: 'PROVENTOS' },
+    { code: '2043', description: 'RRA', category: 'PROVENTOS' },
+    { code: '0546, 00546', description: '13 SAL.VAR', category: 'PROVENTOS' },
   
     // Descontos
     { code: '0808, 00808, 7P40', description: 'PREVIDENCIA', category: 'DESCONTOS' },
@@ -46,13 +49,10 @@ export interface PayrollCode {
     { code: '0550, 00550', description: 'AD 13 SAL(DEZ)', category: 'DESCONTOS' },
     { code: '730R', description: 'TRIB RPPS RRA', category: 'DESCONTOS' },
     { code: '730F', description: 'TRIB FUNPREV RRA', category: 'DESCONTOS' },
+    { code: '6006', description: 'IND FAZENDA', category: 'DESCONTOS' },
+    { code: '0D09', description: 'DESC ADTO DIF SAL', category: 'DESCONTOS' },
   
     // Outros
-    { code: '7014', description: 'REEMBOLSO N TRIBU.', category: 'OUTROS' },
-    { code: '6008', description: 'RESTITUICAO', category: 'OUTROS' },
-    { code: '2043', description: 'RRA', category: 'OUTROS' },
-    { code: '6006', description: 'IND FAZENDA', category: 'OUTROS' },
-    { code: '0D09', description: 'DESC ADTO DIF SAL', category: 'OUTROS' },
 
   ];
   
